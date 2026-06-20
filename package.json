@@ -9,6 +9,7 @@
     "install-browser": "npx playwright install chromium"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "dotenv": "^16.4.5",
     "node-cron": "^3.0.3",
     "playwright": "^1.45.0",
@@ -16,5 +17,7 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "ws": "^8.17.1"
   },
-  "engines": { "node": ">=18.0.0" }
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

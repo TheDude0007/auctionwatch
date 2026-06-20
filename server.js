@@ -5,6 +5,11 @@ const path  = require('path');
 const { WebSocketServer } = require('ws');
 const cron  = require('node-cron');
 const { searchNellis, closeBrowser } = require('./scraper');
+const Anthropic = require('@anthropic-ai/sdk');
+
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
 
 const PORT           = parseInt(process.env.PORT || '3010');
 const SCAN_CRON      = process.env.SCAN_CRON || '0 8 * * *';
@@ -240,6 +245,69 @@ const server = http.createServer(async (req, res) => {
     const cronExpr = `${m} ${h} * * *`;
     rescheduleDailyScan(cronExpr);
     return sendJSON(res, 200, { cron: cronExpr });
+  }
+
+  // ── POST /api/chat  (AI assistant — SSE streaming) ──
+  if (url === '/api/chat' && req.method === 'POST') {
+    const body = await readBody(req).catch(() => null);
+    const sseHeaders = {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'X-Accel-Buffering': 'no',
+    };
+    if (!body || !body.message) { res.writeHead(400); return res.end(); }
+    if (!anthropic) {
+      res.writeHead(200, sseHeaders);
+      res.write(`data: ${JSON.stringify({ t: '⚠️  Set ANTHROPIC_API_KEY in your .env file to enable AI chat.' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
+    const now = Date.now();
+    const ctxItems = liveItems.slice(0, 30).map(i => ({
+      title: i.title,
+      price: `$${i.price.toFixed(2)}`,
+      threshold: `$${(i.th || 0).toFixed(2)}`,
+      timeLeft: i.end > now ? `${Math.round((i.end - now) / 1000)}s` : 'ENDED',
+      dealScore: i.th > 0 ? `${Math.round(((i.th - i.price) / i.th) * 100)}%` : 'n/a',
+      url: i.url,
+      category: i.category || 'misc',
+    }));
+    const ctxWatches = watchlist.map(w => ({ keyword: w.kw, maxPrice: `$${w.th.toFixed(2)}`, category: w.cat }));
+    const system = `You are AuctionWatch AI — an expert auction strategist embedded in a real-time Nellis Auction bid-sniping tool.
+
+LIVE AUCTION DATA (as of ${new Date().toLocaleString()}):
+Watchlist: ${JSON.stringify(ctxWatches)}
+Live Items: ${JSON.stringify(ctxItems)}
+
+Your role: help the user win great deals. Be concise and direct. Use **bold** for prices and key terms. Use bullet points for lists. Flag urgency when items are ending soon (< 5 min). Never invent data not in the context above. If the watchlist is empty, encourage the user to add keywords.`;
+
+    const history = (body.history || []).slice(-10).map(m => ({ role: m.role, content: m.content }));
+    const messages = [...history, { role: 'user', content: body.message }];
+
+    res.writeHead(200, sseHeaders);
+    try {
+      const stream = anthropic.messages.stream({
+        model: 'claude-opus-4-8',
+        max_tokens: 600,
+        system,
+        messages,
+      });
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          res.write(`data: ${JSON.stringify({ t: event.delta.text })}\n\n`);
+        }
+      }
+    } catch (err) {
+      console.error('[chat]', err.message);
+      const msg = err.status === 401
+        ? '⚠️  Invalid API key — check ANTHROPIC_API_KEY in .env.'
+        : '⚠️  AI unavailable — try again in a moment.';
+      res.write(`data: ${JSON.stringify({ t: msg })}\n\n`);
+    }
+    res.write('data: [DONE]\n\n');
+    return res.end();
   }
 
   res.writeHead(404); res.end();
