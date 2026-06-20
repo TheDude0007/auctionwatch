@@ -901,7 +901,7 @@ function setScanTime(){
   schedH=h;schedM=m;
   updateCountdown();
   if(backendConnected){
-    fetch('http://localhost:3010/api/scan-cron',{
+    fetch('/api/scan-cron',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({hour:h,min:m})
     }).catch(()=>{});
@@ -912,7 +912,7 @@ function setScanTime(){
 
 function triggerScan(){
   if(backendConnected){
-    fetch('http://localhost:3010/api/scan',{method:'POST'}).catch(()=>{});
+    fetch('/api/scan',{method:'POST'}).catch(()=>{});
     term('Manual scan triggered…','scan');
     notify('info','Manual scan queued','Scanning all keywords now');
   }else{
@@ -982,7 +982,7 @@ function tick(){
 (function bridge(){
   function connect(){
     let ws;
-    try{ws=new WebSocket('ws://localhost:3010');}catch{retry();return;}
+    try{const wsProto=location.protocol==='https:'?'wss:':'ws:';ws=new WebSocket(`${wsProto}//${location.host}`);}catch{retry();return;}
 
     ws.onopen=()=>{
       backendConnected=true;
@@ -1062,7 +1062,7 @@ function tick(){
     _add();
     if(backendConnected&&watches.length){
       const w=watches[watches.length-1];
-      fetch('http://localhost:3010/api/watchlist',{
+      fetch('/api/watchlist',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({kw:w.kw,th:w.th,cat:w.cat})
       }).catch(()=>{});
@@ -1070,7 +1070,7 @@ function tick(){
   };
   const _rm=window.removeWatch;
   window.removeWatch=function(id){
-    if(backendConnected)fetch(`http://localhost:3010/api/watchlist/${id}`,{method:'DELETE'}).catch(()=>{});
+    if(backendConnected)fetch(`/api/watchlist/${id}`,{method:'DELETE'}).catch(()=>{});
     _rm(id);
   };
 
@@ -1110,7 +1110,7 @@ setInterval(tick,1000);
    AI CHAT WIDGET
    ========================================================= */
 (function(){
-  const BASE = 'http://localhost:3010';
+  const BASE = '';
   let chatOpen = false;
   let chatHistory = [];
   let streaming = false;
