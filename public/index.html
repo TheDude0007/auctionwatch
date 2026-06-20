@@ -67,6 +67,49 @@ header{
 .dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:blink 1.4s ease infinite}
 @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.8)}}
 
+/* ══ LIVE TICKER ══ */
+.ticker-wrap{
+  display:flex;align-items:center;
+  background:rgba(4,3,14,.98);border-bottom:1px solid rgba(108,99,255,.18);
+  height:32px;overflow:hidden;position:relative;z-index:100;flex-shrink:0;
+}
+.ticker-label{
+  flex-shrink:0;padding:0 .85rem;font-size:.58rem;font-weight:900;
+  letter-spacing:.18em;color:var(--green);
+  border-right:1px solid rgba(0,255,106,.18);height:100%;
+  display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+  background:rgba(0,255,106,.04);
+}
+.ticker-label::before{
+  content:'';width:5px;height:5px;border-radius:50%;background:var(--green);
+  animation:blink 1.2s ease infinite;flex-shrink:0;
+}
+.ticker-track{flex:1;overflow:hidden;height:100%;position:relative}
+.ticker-belt{
+  display:flex;align-items:center;gap:0;white-space:nowrap;
+  height:100%;
+  animation:ticker-scroll 28s linear infinite;
+}
+.ticker-belt:hover{animation-play-state:paused}
+@keyframes ticker-scroll{
+  0%{transform:translateX(0)}
+  100%{transform:translateX(-50%)}
+}
+.t-item{
+  display:inline-flex;align-items:center;gap:.45rem;
+  padding:0 1.4rem;font-size:.68rem;color:var(--muted);
+  border-right:1px solid rgba(108,99,255,.1);white-space:nowrap;
+  cursor:default;transition:color .2s;
+}
+.t-item:hover{color:var(--text)}
+.t-item.t-urgent{color:rgba(255,100,100,.85)}
+.t-item.t-ending{color:var(--gold)}
+.t-item.t-deal{color:var(--green)}
+.t-item .t-price{font-weight:800;color:var(--cyan)}
+.t-item .t-kw{font-size:.6rem;opacity:.55;margin-left:.15rem}
+.t-item .t-time{font-size:.6rem;font-weight:700}
+.t-sep{padding:0 .55rem;color:rgba(108,99,255,.25);font-size:.7rem;user-select:none}
+
 /* ══ FILTER BAR ══ */
 .filter-bar{
   display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;
@@ -397,6 +440,16 @@ select option{background:#0b0b1e}
     </div>
   </header>
 
+  <!-- ══ LIVE TICKER ══ -->
+  <div class="ticker-wrap">
+    <div class="ticker-label">⚡ LIVE</div>
+    <div class="ticker-track">
+      <div class="ticker-belt" id="ticker-belt">
+        <span class="ticker-seed">Connecting to auction feed…</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ FILTER BAR ══ -->
   <div class="filter-bar">
     <span class="flabel">Sort</span>
@@ -569,6 +622,41 @@ const MOCK=[
   {id:7,title:'Omega Speedmaster Moonwatch 2021 Set',category:'watches',price:3.20,end:Date.now()+24000,url:'#',img:'',premium:0},
   {id:8,title:'PlayStation 5 Digital Edition Bundle',category:'electronics',price:2.50,end:Date.now()+44000,url:'#',img:'',premium:0},
 ];
+
+/* =========================================================
+   LIVE TICKER
+   =========================================================
+   Renders two back-to-back copies of the item list so the
+   CSS marquee loops seamlessly without a jump.
+   ========================================================= */
+function buildTicker(){
+  const belt=document.getElementById('ticker-belt');
+  if(!belt)return;
+  const now=Date.now();
+  const items=live.length?live:MOCK;
+  if(!items.length)return;
+
+  function makeChip(item){
+    const rem=item.end-now;
+    const urgent=rem>0&&rem<=60000;
+    const ending=rem>0&&rem<=300000;
+    const hot=item.th>0&&item.price<=item.th;
+    const cls=urgent?'t-item t-urgent':ending?'t-item t-ending':hot?'t-item t-deal':'t-item';
+    const timeStr=rem<=0?'ENDED':fmt(rem);
+    const icon=urgent?'🚨':ending?'⚡':(item.emoji||'📦');
+    const ds=item.th>0?` [${Math.round(((item.th-item.price)/item.th)*100)}% off]`:'';
+    return`<span class="${cls}">${icon} ${item.title.slice(0,36)}… <span class="t-price">$${item.price.toFixed(2)}</span><span class="t-kw">${ds}</span><span class="t-time"> · ${timeStr}</span></span><span class="t-sep">◆</span>`;
+  }
+
+  const html=items.map(makeChip).join('');
+  // Two copies = seamless loop
+  belt.innerHTML=html+html;
+
+  // Adjust speed based on content width
+  const totalW=belt.scrollWidth/2;
+  const speed=Math.max(18,Math.min(60,totalW/28));
+  belt.style.animation=`ticker-scroll ${speed}s linear infinite`;
+}
 
 /* =========================================================
    AUDIO
@@ -750,6 +838,8 @@ function renderItems(){
   const grid=document.getElementById('items-grid');
   const empty=document.getElementById('empty-st');
   const now=Date.now();
+
+  buildTicker();
 
   let items=activeCat==='all'?live:live.filter(i=>(i.category||'')===activeCat);
   document.getElementById('fcount').textContent=items.length+' item'+(items.length!==1?'s':'');
@@ -1105,6 +1195,7 @@ term('Searching for backend server…');
 scanPct=8;
 
 setInterval(tick,1000);
+setInterval(buildTicker,5000);
 
 /* =========================================================
    AI CHAT WIDGET
