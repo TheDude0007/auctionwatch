@@ -1,0 +1,20 @@
+{
+  "name": "auctionwatch-server",
+  "version": "1.0.0",
+  "description": "NellisAuction daily scanner + WebSocket alert server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "install-browser": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.45.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "ws": "^8.17.1"
+  },
+  "engines": { "node": ">=18.0.0" }
+}

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuctionWatch ⚡</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --purple:#6c63ff;--pink:#f72585;--green:#00ff6a;
+  --red:#ff3c3c;--dark:#080812;--panel:rgba(12,12,30,0.88);
+  --border:rgba(108,99,255,0.22);
+}
+body{background:var(--dark);color:#dde;font-family:'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+#bg{position:fixed;inset:0;z-index:0}
+#app{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.1rem 2rem;
+  background:rgba(8,8,18,0.92);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(24px);position:sticky;top:0;z-index:100;
+}
+.logo{
+  font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;
+  background:linear-gradient(120deg,var(--purple),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.header-right{display:flex;align-items:center;gap:1rem}
+.live-badge{
+  display:flex;align-items:center;gap:.45rem;
+  padding:.3rem .9rem;border-radius:999px;font-size:.72rem;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(0,255,106,.08);border:1px solid rgba(0,255,106,.28);color:var(--green)
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.4s ease infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.6)}}
+#hdr-scan{font-size:.78rem;color:rgba(200,200,255,.38)}
+
+/* ── LAYOUT ── */
+.main{display:grid;grid-template-columns:280px 1fr 280px;gap:1.2rem;padding:1.2rem;flex:1}
+
+/* ── PANELS ── */
+.panel{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:1.2rem;backdrop-filter:blur(20px);
+}
+.panel+.panel{margin-top:1rem}
+.ptitle{
+  font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--purple);margin-bottom:1rem;
+}
+
+/* ── FORM ── */
+.form-col{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.1rem}
+input,select{
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  padding:.55rem .85rem;color:#dde;font-size:.85rem;outline:none;
+  transition:border-color .18s;width:100%;
+}
+input:focus,select:focus{border-color:var(--purple)}
+input::placeholder{color:rgba(200,200,255,.28)}
+select option{background:#0d0d20}
+.btn{
+  width:100%;padding:.6rem;border:none;border-radius:8px;cursor:pointer;
+  font-size:.82rem;font-weight:700;letter-spacing:.04em;
+  background:linear-gradient(130deg,var(--purple),var(--pink));color:#fff;
+  transition:transform .15s,box-shadow .15s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 5px 22px rgba(108,99,255,.38)}
+.btn:active{transform:translateY(0)}
+hr.div{border:none;border-top:1px solid var(--border);margin:.9rem 0}
+
+/* ── WATCH LIST ── */
+.wi{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.6rem .75rem;border-radius:8px;margin-bottom:.4rem;
+  background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.14);
+}
+.wi-kw{font-size:.82rem;font-weight:600}
+.wi-th{font-size:.7rem;color:var(--green);font-weight:600;margin-top:.1rem}
+.rm{
+  background:transparent;border:1px solid rgba(255,60,60,.3);
+  color:rgba(255,60,60,.7);padding:.18rem .45rem;border-radius:5px;
+  cursor:pointer;font-size:.66rem;transition:all .15s;
+}
+.rm:hover{background:rgba(255,60,60,.15);border-color:rgba(255,60,60,.6)}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-bottom:1rem}
+.stat{
+  text-align:center;padding:.65rem .3rem;border-radius:10px;
+  background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.14);
+}
+.sv{
+  font-size:1.35rem;font-weight:800;
+  background:linear-gradient(120deg,var(--purple),var(--pink));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.sl{font-size:.6rem;color:rgba(200,200,255,.38);text-transform:uppercase;letter-spacing:.06em;margin-top:.1rem}
+
+/* ── SCAN BAR ── */
+.sbar-row{display:flex;justify-content:space-between;font-size:.72rem;color:rgba(200,200,255,.38);margin-bottom:.35rem}
+.sbar-track{height:3px;background:rgba(108,99,255,.13);border-radius:999px;overflow:hidden}
+.sbar-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--pink));border-radius:999px;transition:width .8s linear}
+
+/* ── ITEMS GRID ── */
+#items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.empty{text-align:center;padding:2.5rem 1rem;color:rgba(200,200,255,.25);font-size:.85rem}
+.empty-ico{font-size:2.2rem;margin-bottom:.5rem}
+
+/* ── 3D CARD ── */
+.cw{perspective:900px}
+.card{
+  position:relative;transform-style:preserve-3d;border-radius:14px;cursor:pointer;
+  transition:transform .5s cubic-bezier(.23,1,.32,1);
+}
+.cf{
+  background:linear-gradient(148deg,rgba(18,14,44,.97),rgba(24,10,40,.97));
+  border:1px solid var(--border);border-radius:14px;
+  padding:1rem;position:relative;overflow:hidden;
+}
+.cf::before{
+  content:'';position:absolute;top:0;left:0;width:100%;height:2.5px;
+  background:linear-gradient(90deg,var(--purple),var(--pink));
+}
+.cf.alert-card::before{
+  background:linear-gradient(90deg,var(--red),#ff8800);
+  animation:sline .8s ease infinite alternate;
+}
+@keyframes sline{from{opacity:.4}to{opacity:1}}
+.card.alarm{animation:gpulse .55s ease infinite alternate}
+@keyframes gpulse{
+  from{box-shadow:0 0 0 0 rgba(255,60,60,0)}
+  to{box-shadow:0 0 30px 4px rgba(255,60,60,.55),0 0 80px 8px rgba(255,60,60,.18)}
+}
+.ccat{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--purple);margin-bottom:.4rem}
+.cimg{
+  width:100%;height:88px;border-radius:8px;
+  background:rgba(108,99,255,.09);border:1px solid rgba(108,99,255,.18);
+  display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin-bottom:.7rem;
+}
+.ctitle{font-size:.88rem;font-weight:600;line-height:1.35;margin-bottom:.6rem}
+.crow{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.cprice{font-size:1.2rem;font-weight:800;color:var(--green)}
+.cprice.hot{color:var(--red);animation:pf .5s ease infinite alternate}
+@keyframes pf{from{color:var(--red)}to{color:#ff8800}}
+.tbadge{
+  font-size:.65rem;padding:.18rem .5rem;border-radius:4px;
+  background:rgba(0,255,106,.08);border:1px solid rgba(0,255,106,.28);color:var(--green);font-weight:700;
+}
+.tbadge.hit{
+  background:rgba(255,60,60,.18);border-color:rgba(255,60,60,.5);color:var(--red);
+  animation:pf .5s ease infinite alternate;
+}
+.cdown{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:rgba(200,200,255,.5);margin-bottom:.55rem}
+.cdown.urgent{color:var(--red);font-weight:700;font-size:.92rem;animation:uf .5s ease infinite alternate}
+@keyframes uf{from{opacity:1}to{opacity:.55}}
+.cstatus{
+  display:inline-flex;align-items:center;gap:.28rem;
+  padding:.18rem .55rem;border-radius:999px;font-size:.65rem;font-weight:700;
+}
+.st-live{background:rgba(0,255,106,.08);border:1px solid rgba(0,255,106,.28);color:var(--green)}
+.st-end{background:rgba(255,60,60,.16);border:1px solid rgba(255,60,60,.45);color:var(--red)}
+.st-up{background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);color:#908bff}
+
+/* ── NOTIFICATIONS ── */
+.nf{
+  padding:.75rem .85rem;border-radius:9px;margin-bottom:.4rem;
+  border-left:3px solid var(--border);background:rgba(255,255,255,.025);
+  animation:nslide .3s ease;
+}
+@keyframes nslide{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+.nf-alert{border-color:var(--red);background:rgba(255,60,60,.07)}
+.nf-info{border-color:var(--purple)}
+.nf-ok{border-color:var(--green);background:rgba(0,255,106,.05)}
+.nt{font-size:.78rem;font-weight:600;margin-bottom:.18rem}
+.nb{font-size:.7rem;color:rgba(200,200,255,.52);line-height:1.4}
+.ntime{font-size:.62rem;color:rgba(200,200,255,.3);margin-top:.25rem}
+
+/* ── TOAST ── */
+#toasts{position:fixed;top:1.3rem;right:1.3rem;z-index:999;display:flex;flex-direction:column;gap:.6rem}
+.toast{
+  padding:.9rem 1.3rem;border-radius:12px;
+  background:rgba(10,10,24,.96);border:1px solid rgba(255,60,60,.55);
+  box-shadow:0 8px 32px rgba(255,60,60,.28),0 0 60px rgba(255,60,60,.1);
+  max-width:320px;animation:tin .4s cubic-bezier(.23,1,.32,1);backdrop-filter:blur(20px);
+}
+@keyframes tin{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+.th{display:flex;align-items:center;gap:.45rem;font-weight:800;font-size:.88rem;color:var(--red);margin-bottom:.3rem}
+.tb{font-size:.8rem;color:rgba(220,220,255,.82);line-height:1.45}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(108,99,255,.3);border-radius:999px}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="toasts"></div>
+
+<div id="app">
+  <header>
+    <div class="logo">⚡ AuctionWatch</div>
+    <div class="header-right">
+      <div id="hdr-scan">Next scan: --</div>
+      <div class="live-badge"><div class="dot"></div>LIVE</div>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- LEFT: CONFIG -->
+    <div>
+      <div class="panel">
+        <div class="ptitle">Add to Watchlist</div>
+        <div class="form-col">
+          <input id="kw" type="text" placeholder="Product name  (e.g. Rolex, MacBook)">
+          <input id="th" type="number" placeholder="Max bid threshold  ($)" step="0.01" min="0.01">
+          <select id="cat">
+            <option value="">All Categories</option>
+            <option value="electronics">Electronics</option>
+            <option value="watches">Watches & Jewelry</option>
+            <option value="collectibles">Collectibles</option>
+            <option value="fashion">Fashion</option>
+            <option value="sports">Sports</option>
+            <option value="art">Art</option>
+          </select>
+          <button class="btn" onclick="addWatch()">+ Add to Watchlist</button>
+        </div>
+        <hr class="div">
+        <div class="ptitle">Daily Scan Schedule</div>
+        <div class="form-col">
+          <input id="scan-time" type="time" value="08:00" style="color:#dde">
+          <button class="btn" style="background:linear-gradient(130deg,#1a1a4a,#2a1a5a);border:1px solid var(--border)" onclick="setScanTime()">Set Daily Scan Time</button>
+        </div>
+        <div id="scan-next-abs" style="font-size:.7rem;color:rgba(200,200,255,.38);margin-bottom:.4rem"></div>
+        <hr class="div">
+        <div class="ptitle">Product List</div>
+        <div id="wlist"></div>
+      </div>
+
+      <div class="panel">
+        <div class="ptitle">Monitor Stats</div>
+        <div class="stats">
+          <div class="stat"><div class="sv" id="sw">0</div><div class="sl">Watching</div></div>
+          <div class="stat"><div class="sv" id="sl2">0</div><div class="sl">Live</div></div>
+          <div class="stat"><div class="sv" id="sa">0</div><div class="sl">Alerts</div></div>
+        </div>
+        <div class="sbar-row"><span>Daily Scan</span><span id="spct">0%</span></div>
+        <div class="sbar-track"><div class="sbar-fill" id="sfill" style="width:0%"></div></div>
+        <div id="sub-scan" style="font-size:.72rem;color:rgba(200,200,255,.3);margin-top:.6rem"></div>
+      </div>
+    </div>
+
+    <!-- CENTER: LIVE FEED -->
+    <div class="panel">
+      <div class="ptitle">Live Auction Feed</div>
+      <div id="items-grid"></div>
+      <div class="empty" id="empty"><div class="empty-ico">🔍</div>Add keywords to your watchlist to start monitoring</div>
+    </div>
+
+    <!-- RIGHT: ACTIVITY -->
+    <div class="panel" style="max-height:calc(100vh - 110px);overflow-y:auto">
+      <div class="ptitle">Activity</div>
+      <div id="nlist"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   THREE.JS BACKGROUND
+   ========================================================= */
+(()=>{
+  const canvas = document.getElementById('bg');
+  const R = new THREE.WebGLRenderer({canvas,alpha:true});
+  R.setPixelRatio(devicePixelRatio);
+  R.setSize(innerWidth,innerHeight);
+  const scene = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);
+  cam.position.z=5;
+
+  // Stars
+  const N=1400,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    pos[i*3]=(Math.random()-.5)*40;
+    pos[i*3+1]=(Math.random()-.5)*25;
+    pos[i*3+2]=(Math.random()-.5)*20;
+    const t=Math.random();
+    col[i*3]=.28+t*.45;col[i*3+1]=.15+t*.18;col[i*3+2]=.75+t*.25;
+  }
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  sg.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const stars=new THREE.Points(sg,new THREE.PointsMaterial({size:.045,vertexColors:true,transparent:true,opacity:.7}));
+  scene.add(stars);
+
+  // Floating wireframe polyhedra
+  const geos=[new THREE.OctahedronGeometry(.3),new THREE.IcosahedronGeometry(.22),new THREE.TetrahedronGeometry(.28)];
+  const shapes=[];
+  for(let i=0;i<14;i++){
+    const m=new THREE.Mesh(geos[i%3],new THREE.MeshBasicMaterial({
+      color:i%2?0x6c63ff:0xf72585,wireframe:true,transparent:true,opacity:.13
+    }));
+    m.position.set((Math.random()-.5)*22,(Math.random()-.5)*14,(Math.random()-.5)*10-5);
+    m.userData={rx:(Math.random()-.5)*.012,ry:(Math.random()-.5)*.012,fo:Math.random()*6.28,fs:Math.random()*.004+.001};
+    scene.add(m);shapes.push(m);
+  }
+
+  let mx=0,my=0;
+  document.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5)*.4;my=(e.clientY/innerHeight-.5)*.4});
+  let t=0;
+  (function anim(){requestAnimationFrame(anim);t+=.01;
+    stars.rotation.y+=.0003;stars.rotation.x+=.00008;
+    cam.position.x+=(mx-cam.position.x)*.02;cam.position.y+=(-my-cam.position.y)*.02;cam.lookAt(scene.position);
+    shapes.forEach(s=>{
+      s.rotation.x+=s.userData.rx;s.rotation.y+=s.userData.ry;
+      s.position.y+=Math.sin(t*s.userData.fs*100+s.userData.fo)*.0018;
+    });
+    R.render(scene,cam);
+  })();
+  window.addEventListener('resize',()=>{
+    cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();R.setSize(innerWidth,innerHeight);
+  });
+})();
+
+/* =========================================================
+   MOCK AUCTION DATABASE
+   ========================================================= */
+const EMO={electronics:'💻',watches:'⌚',collectibles:'🏆',fashion:'👟',sports:'⚽',art:'🎨','':'📦'};
+const MOCK=[
+  {id:1,title:'Vintage Rolex Submariner 1960s Ref 5513',category:'watches',price:4.50,end:Date.now()+28000},
+  {id:2,title:'Apple MacBook Pro M2 16" — Factory Sealed',category:'electronics',price:3.75,end:Date.now()+162000},
+  {id:3,title:'Michael Jordan 1986 Fleer Rookie PSA 9',category:'collectibles',price:2.00,end:Date.now()+7200000},
+  {id:4,title:'Nike Air Jordan 1 Retro Bred Sz 11 DS',category:'fashion',price:1.00,end:Date.now()+86400000},
+  {id:5,title:'Bose QuietComfort 45 Wireless — Sealed',category:'electronics',price:4.99,end:Date.now()+52000},
+  {id:6,title:'Andy Warhol Hand Signed Marilyn Print 1985',category:'art',price:6.00,end:Date.now()+3600000},
+  {id:7,title:'Omega Speedmaster Moonwatch 2021 Full Set',category:'watches',price:3.20,end:Date.now()+24000},
+  {id:8,title:'PlayStation 5 Digital Edition Bundle',category:'electronics',price:2.50,end:Date.now()+44000},
+];
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let watches=[];
+let live=[];
+let alertCount=0;
+let scanPct=0;
+const alerted=new Set();
+
+/* =========================================================
+   WATCHLIST
+   ========================================================= */
+function addWatch(){
+  const kw=document.getElementById('kw').value.trim();
+  const th=parseFloat(document.getElementById('th').value);
+  const cat=document.getElementById('cat').value;
+  if(!kw)return notify('info','Enter a keyword first','');
+  if(!th||th<=0)return notify('info','Enter a valid price threshold','');
+  const w={id:Date.now(),kw,th,cat,emoji:EMO[cat]||'📦'};
+  watches.push(w);
+  renderWatches();
+  notify('info',`Watching: "${kw}"`,`Alert when ≤ $${th.toFixed(2)} with 30s left`);
+  scanFor(w);
+  updateStats();
+  document.getElementById('kw').value='';
+  document.getElementById('th').value='';
+}
+
+function removeWatch(id){
+  watches=watches.filter(w=>w.id!==id);
+  live=live.filter(i=>i.wid!==id);
+  renderWatches();renderItems();updateStats();
+}
+
+function renderWatches(){
+  const el=document.getElementById('wlist');
+  if(!watches.length){el.innerHTML='<div class="empty" style="padding:.8rem 0;font-size:.78rem"><div class="empty-ico" style="font-size:1.5rem">👁</div>Nothing watched yet</div>';return}
+  el.innerHTML=watches.map(w=>`
+    <div class="wi">
+      <div>
+        <div class="wi-kw">${w.emoji} ${w.kw}</div>
+        <div class="wi-th">≤ $${w.th.toFixed(2)}</div>
+      </div>
+      <button class="rm" onclick="removeWatch(${w.id})">✕</button>
+    </div>`).join('');
+}
+
+function scanFor(w){
+  MOCK.filter(m=>
+    m.title.toLowerCase().includes(w.kw.toLowerCase())||
+    (w.cat&&m.category===w.cat)
+  ).forEach(m=>{
+    if(!live.find(i=>i.id===m.id)){
+      live.push({...m,wid:w.id,th:w.th,emoji:EMO[m.category]||'📦'});
+      notify('ok',`Match found: ${m.title.slice(0,38)}…`,`Bid: $${m.price.toFixed(2)} · Ends: ${fmt(m.end-Date.now())}`);
+    }
+  });
+  renderItems();
+}
+
+/* =========================================================
+   ITEMS GRID
+   ========================================================= */
+function fmt(ms){
+  if(ms<=0)return'ENDED';
+  const s=Math.floor(ms/1000);
+  if(s<60)return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60)return m+'m '+s%60+'s';
+  return Math.floor(m/60)+'h '+m%60+'m';
+}
+
+function renderItems(){
+  const grid=document.getElementById('items-grid');
+  const empty=document.getElementById('empty');
+  if(!live.length){grid.innerHTML='';empty.style.display='block';return}
+  empty.style.display='none';
+  grid.innerHTML=live.map(item=>{
+    const rem=item.end-Date.now();
+    const urgent=rem>0&&rem<=30000;
+    const ending=rem>0&&rem<=300000;
+    const hot=item.price<=item.th;
+    const alarm=urgent&&hot;
+    const status=rem<=0?'ENDED':urgent?'ENDING SOON':ending?'ENDING':'LIVE';
+    const sc=rem<=0?'st-up':urgent?'st-end':'st-live';
+    return`<div class="cw">
+      <div class="card${alarm?' alarm':''}" onmousemove="tilt(this,event)" onmouseleave="untilt(this)">
+        <div class="cf${alarm?' alert-card':''}">
+          <div class="ccat">${item.category||'General'}</div>
+          <div class="cimg">${item.emoji}</div>
+          <div class="ctitle">${item.title}</div>
+          <div class="crow">
+            <div class="cprice${hot?' hot':''}">$${item.price.toFixed(2)}</div>
+            <div class="tbadge${hot?' hit':''}">${hot?'🔥 HIT':'≤ $'+item.th}</div>
+          </div>
+          <div class="cdown${urgent?' urgent':''}">
+            <span>${urgent?'🚨':'⏱'}</span>
+            <span>${fmt(rem)}</span>
+          </div>
+          <span class="cstatus ${sc}">${status}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function tilt(el,e){
+  const r=el.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+  el.style.transform=`rotateY(${x*22}deg) rotateX(${-y*16}deg) translateZ(12px)`;
+}
+function untilt(el){el.style.transform=''}
+
+/* =========================================================
+   NOTIFICATIONS
+   ========================================================= */
+function notify(type,title,body){
+  const nl=document.getElementById('nlist');
+  const d=document.createElement('div');
+  d.className=`nf nf-${type==='ok'?'ok':type==='alert'?'alert':'info'}`;
+  d.innerHTML=`<div class="nt">${title}</div><div class="nb">${body}</div><div class="ntime">${new Date().toLocaleTimeString()}</div>`;
+  nl.prepend(d);
+  while(nl.children.length>24)nl.removeChild(nl.lastChild);
+}
+
+function toast(title,body){
+  const c=document.getElementById('toasts');
+  const d=document.createElement('div');d.className='toast';
+  d.innerHTML=`<div class="th">🚨 ${title}</div><div class="tb">${body}</div>`;
+  c.appendChild(d);
+  setTimeout(()=>{d.style.transition='opacity .5s';d.style.opacity='0';setTimeout(()=>d.remove(),520)},7000);
+}
+
+/* =========================================================
+   MAIN TICK
+   ========================================================= */
+let drift=0;
+function tick(){
+  drift++;
+  // Simulate occasional bid increments
+  live.forEach(item=>{
+    if(item.end>Date.now()&&Math.random()<(item.end-Date.now()<60000?.28:.04)){
+      item.price+=+(Math.random()*.55+.05).toFixed(2);
+    }
+  });
+
+  // ≤ 1-minute alert check (price threshold + time gate)
+  live.forEach(item=>{
+    const rem=item.end-Date.now();
+    if(rem>0&&rem<=60000&&item.price<=item.th&&!alerted.has(item.id)){
+      alerted.add(item.id);alertCount++;
+      toast('Bid Now!',`<strong>${item.title.slice(0,45)}…</strong><br>${fmt(rem)} left · Current bid: <strong>$${item.price.toFixed(2)}</strong> (your max: $${item.th})`);
+      notify('alert',`🚨 &lt;1 Min Alert: ${item.title.slice(0,30)}…`,`$${item.price.toFixed(2)} ≤ $${item.th} · ${fmt(rem)} remaining — place your bid!`);
+      if(Notification.permission==='granted')
+        new Notification('⚡ AuctionWatch — Bid Now!',{body:`${item.title.slice(0,50)}\n$${item.price.toFixed(2)} with ${fmt(rem)} left!`});
+    }
+  });
+
+  renderItems();
+  updateStats();
+
+  // Scan progress (simulated 20-second boot scan)
+  if(scanPct<100){scanPct=Math.min(100,scanPct+.42);
+    document.getElementById('sfill').style.width=scanPct+'%';
+    document.getElementById('spct').textContent=Math.floor(scanPct)+'%';
+  }
+
+  // Next scan countdown (live, tied to scheduled time)
+  updateNextScanCountdown();
+}
+
+/* =========================================================
+   SCAN SCHEDULE
+   ========================================================= */
+let scheduledHour=8,scheduledMin=0;
+
+function setScanTime(){
+  const val=document.getElementById('scan-time').value;
+  const [h,m]=val.split(':').map(Number);
+  scheduledHour=h;scheduledMin=m;
+  updateNextScanCountdown();
+  notify('info',`Daily scan set for ${fmt12(h,m)}`,`AuctionWatch will search all product keywords automatically each day`);
+}
+
+function fmt12(h,m){
+  const ampm=h>=12?'PM':'AM';
+  const hh=h%12||12;
+  return`${hh}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function secsUntilNextScan(){
+  const now=new Date();
+  const target=new Date(now);
+  target.setHours(scheduledHour,scheduledMin,0,0);
+  if(target<=now)target.setDate(target.getDate()+1);
+  return Math.floor((target-now)/1000);
+}
+
+function updateNextScanCountdown(){
+  const s=secsUntilNextScan();
+  const h=Math.floor(s/3600),m=Math.floor(s%3600/60),sc=s%60;
+  const str=`Next scan: ${h}h ${m}m ${sc}s  (daily at ${fmt12(scheduledHour,scheduledMin)})`;
+  document.getElementById('hdr-scan').textContent=`Scan @ ${fmt12(scheduledHour,scheduledMin)}`;
+  document.getElementById('sub-scan').textContent=str;
+  document.getElementById('scan-next-abs').textContent=`Scheduled: ${fmt12(scheduledHour,scheduledMin)} daily`;
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
+
+// Seed demo watchlist
+const seed=[['Rolex','5','watches'],['MacBook','5','electronics'],['Jordan','5','collectibles']];
+let delay=700;
+seed.forEach(([kw,th,cat])=>{
+  setTimeout(()=>{
+    document.getElementById('kw').value=kw;
+    document.getElementById('th').value=th;
+    document.getElementById('cat').value=cat;
+    addWatch();
+  },delay);
+  delay+=500;
+});
+
+updateStats();
+updateNextScanCountdown();
+notify('info','AuctionWatch online',`Daily scan active — searches all keywords at ${fmt12(scheduledHour,scheduledMin)}`);
+setInterval(tick,1000);
+
+function updateStats(){
+  document.getElementById('sw').textContent=watches.length;
+  document.getElementById('sl2').textContent=live.filter(i=>i.end>Date.now()).length;
+  document.getElementById('sa').textContent=alertCount;
+}
+</script>
+</body>
+</html>
