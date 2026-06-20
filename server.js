@@ -6,12 +6,21 @@ const { WebSocketServer } = require('ws');
 const cron  = require('node-cron');
 const { searchNellis, closeBrowser } = require('./scraper');
 
-const PORT      = parseInt(process.env.PORT || '3010');
-const SCAN_CRON = process.env.SCAN_CRON || '0 8 * * *';
+const PORT           = parseInt(process.env.PORT || '3010');
+const SCAN_CRON      = process.env.SCAN_CRON || '0 8 * * *';
+const WATCHLIST_FILE = path.join(__dirname, 'watchlist.json');
 
 // ── State ────────────────────────────────────────────────────
-let watchlist = [];   // [{ id, kw, th, cat }]
-let liveItems = [];   // current auction items from Nellis
+function loadWatchlist() {
+  try { return fs.existsSync(WATCHLIST_FILE) ? JSON.parse(fs.readFileSync(WATCHLIST_FILE, 'utf8')) : []; }
+  catch { return []; }
+}
+function saveWatchlist() {
+  try { fs.writeFileSync(WATCHLIST_FILE, JSON.stringify(watchlist, null, 2)); } catch { /* ok */ }
+}
+
+let watchlist = loadWatchlist(); // [{ id, kw, th, cat }]
+let liveItems = [];              // current auction items from Nellis
 const alerted = new Set();
 
 // ── Mock data (used when MOCK_MODE=true or scrape fails on first run) ──
@@ -192,6 +201,7 @@ const server = http.createServer(async (req, res) => {
     if (!body) return sendJSON(res, 400, { error: 'bad body' });
     const item = { ...body, id: Date.now() };
     watchlist.push(item);
+    saveWatchlist();
     sendJSON(res, 201, item);
     // Immediate scan for just this keyword (non-blocking)
     setTimeout(() => runScan(item.kw), 500);
@@ -203,6 +213,7 @@ const server = http.createServer(async (req, res) => {
     const id   = parseInt(url.split('/').pop());
     watchlist  = watchlist.filter(w => w.id !== id);
     liveItems  = liveItems.filter(i => i.wid !== id);
+    saveWatchlist();
     broadcast({ type: 'scan_complete', items: liveItems, ts: Date.now() });
     return sendJSON(res, 200, { ok: true });
   }
@@ -216,6 +227,19 @@ const server = http.createServer(async (req, res) => {
     sendJSON(res, 202, { queued: true });
     setTimeout(runScan, 100);
     return;
+  }
+
+  // ── POST /api/scan-cron  (reschedule daily scan) ──
+  if (url === '/api/scan-cron' && req.method === 'POST') {
+    const body = await readBody(req).catch(() => null);
+    if (!body || body.hour === undefined || body.min === undefined)
+      return sendJSON(res, 400, { error: 'need hour + min' });
+    const h = parseInt(body.hour), m = parseInt(body.min);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59)
+      return sendJSON(res, 400, { error: 'invalid hour/min' });
+    const cronExpr = `${m} ${h} * * *`;
+    rescheduleDailyScan(cronExpr);
+    return sendJSON(res, 200, { cron: cronExpr });
   }
 
   res.writeHead(404); res.end();
@@ -235,10 +259,19 @@ wss.on('connection', ws => {
 
 // ── Schedules ────────────────────────────────────────────────
 // Daily full scan — jitter ±5 min so requests don't land at :00 exactly
-cron.schedule(SCAN_CRON, () => {
+let cronTask = cron.schedule(SCAN_CRON, () => {
   const jitter = Math.random() * 5 * 60 * 1000;
   setTimeout(runScan, jitter);
 });
+
+function rescheduleDailyScan(cronExpr) {
+  cronTask.stop();
+  cronTask = cron.schedule(cronExpr, () => {
+    const jitter = Math.random() * 5 * 60 * 1000;
+    setTimeout(runScan, jitter);
+  });
+  console.log(`[cron] rescheduled: ${cronExpr}`);
+}
 
 setInterval(checkAlerts,     15_000);      // alert check: every 15 s (local only)
 setInterval(refreshSoonEnding, 5 * 60_000); // price refresh: every 5 min for ending items

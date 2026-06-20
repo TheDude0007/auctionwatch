@@ -524,6 +524,12 @@ function setScanTime(){
   const [h,m]=val.split(':').map(Number);
   scheduledHour=h;scheduledMin=m;
   updateNextScanCountdown();
+  if(backendConnected){
+    fetch('http://localhost:3010/api/scan-cron',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({hour:h,min:m})
+    }).catch(()=>{});
+  }
   notify('info',`Daily scan set for ${fmt12(h,m)}`,`Searches all keywords automatically every day`);
 }
 
@@ -568,7 +574,7 @@ let backendConnected=false;
     ws.onopen=()=>{
       backendConnected=true;
       document.getElementById('live-badge').innerHTML='<div class="dot"></div>BACKEND LIVE';
-      notify('ok','Backend connected','Live eBay data active — demo mode suspended');
+      notify('ok','Backend connected','Live Nellis data active — demo mode suspended');
     };
 
     ws.onmessage=e=>{
@@ -588,7 +594,7 @@ let backendConnected=false;
         scanPct=100;
         document.getElementById('sfill').style.width='100%';
         document.getElementById('spct').textContent='100%';
-        notify('ok','eBay scan complete',`${msg.items.length} matching auctions found`);
+        notify('ok','Nellis scan complete',`${msg.items.length} matching auctions found`);
       }
 
       if(msg.type==='alert'){

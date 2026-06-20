@@ -2,5 +2,6 @@ node_modules/
 .env
 .nellis-cookies.json
 .nellis-storage.json
+watchlist.json
 *.log
 .DS_Store
