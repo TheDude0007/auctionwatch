@@ -136,9 +136,10 @@ header{
 
 /* ══ LAYOUT ══ */
 .main{
-  display:grid;grid-template-columns:285px 1fr 285px;
-  gap:.95rem;padding:.95rem 1.2rem;flex:1;align-items:start;
+  display:grid;grid-template-columns:260px 1fr;
+  gap:.9rem;padding:.9rem 1.1rem;flex:1;align-items:start;
 }
+.left-col{display:flex;flex-direction:column;gap:.9rem;position:sticky;top:90px;max-height:calc(100vh - 110px);overflow-y:auto}
 
 /* ══ PANELS ══ */
 .panel{
@@ -229,7 +230,18 @@ select option{background:#0b0b1e}
 .time-row .btn{width:auto;padding:.44rem .82rem;font-size:.72rem;flex-shrink:0}
 
 /* ══ ITEMS GRID ══ */
-#items-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.95rem}
+#items-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:.5rem}
+/* ── Pagination ── */
+#pagination{display:flex;align-items:center;justify-content:center;gap:.55rem;padding:.8rem 0 .4rem;flex-wrap:wrap}
+.pg-btn{
+  background:rgba(108,99,255,.09);border:1px solid rgba(108,99,255,.2);
+  color:var(--muted);padding:.28rem .75rem;border-radius:8px;cursor:pointer;
+  font-size:.72rem;font-weight:700;transition:all .18s;
+}
+.pg-btn:hover:not(:disabled){background:rgba(108,99,255,.2);color:var(--text)}
+.pg-btn:disabled{opacity:.3;cursor:default}
+.pg-btn.pg-active{background:linear-gradient(130deg,var(--purple),var(--pink));color:#fff;border-color:transparent}
+.pg-info{font-size:.66rem;color:var(--muted);padding:0 .3rem}
 .empty-state{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;padding:5rem 1.5rem;color:var(--muted);gap:.75rem;
@@ -239,136 +251,86 @@ select option{background:#0b0b1e}
 .empty-title{font-size:1.05rem;font-weight:700;color:rgba(200,200,255,.55)}
 .empty-sub{font-size:.78rem;line-height:1.6;max-width:260px}
 
-/* ══ 3D CARD ══ */
-.cw{perspective:1000px}
-.card{
-  position:relative;transform-style:preserve-3d;border-radius:16px;
-  transition:transform .4s cubic-bezier(.23,1,.32,1);
+/* ══ COMPACT TILE CARD ══ */
+.ctile{
+  display:flex;flex-direction:column;
+  border-radius:11px;border:1px solid rgba(108,99,255,.18);
+  background:linear-gradient(158deg,rgba(10,8,28,.97),rgba(14,6,24,.97));
+  padding:.5rem .48rem .48rem;position:relative;overflow:hidden;
+  text-decoration:none;color:var(--text);
+  transition:transform .22s cubic-bezier(.23,1,.32,1),border-color .22s,box-shadow .22s;
+  cursor:pointer;height:100%;
 }
-.cf{
-  border-radius:16px;border:1px solid rgba(108,99,255,.2);
-  padding:.95rem;position:relative;overflow:hidden;
-  background:linear-gradient(148deg,rgba(10,8,28,.97),rgba(16,6,26,.97));
-  transition:border-color .3s,box-shadow .3s;
-}
-/* Accent bar */
-.cf::before{
+.ctile::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--purple),var(--pink));opacity:.6;
+  background:linear-gradient(90deg,var(--purple),var(--pink));opacity:.55;
 }
-/* Ambient shimmer */
-.cf::after{
-  content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;
-  background:radial-gradient(ellipse at 50% -10%,rgba(108,99,255,.1),transparent 65%);
-  opacity:0;transition:opacity .3s;
+.ctile::after{
+  content:'';position:absolute;inset:0;border-radius:11px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% -10%,rgba(108,99,255,.12),transparent 65%);
+  opacity:0;transition:opacity .25s;
 }
-.cf:hover{border-color:rgba(108,99,255,.38);box-shadow:0 0 0 1px rgba(108,99,255,.08)}
-.cf:hover::after{opacity:1}
-
-/* Card states */
-.cf.c-deal{border-color:rgba(0,255,106,.28)!important}
-.cf.c-deal::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
-.cf.c-ending{border-color:rgba(255,215,0,.3)!important}
-.cf.c-ending::before{background:linear-gradient(90deg,var(--gold),var(--pink));opacity:.9}
-.cf.c-urgent{border-color:rgba(255,60,60,.45)!important;box-shadow:0 0 0 1px rgba(255,60,60,.18),0 8px 40px rgba(255,60,60,.15)!important}
-.cf.c-urgent::before{background:linear-gradient(90deg,var(--red),#ff8800);animation:sline .65s ease infinite alternate;opacity:1}
+.ctile:hover{border-color:rgba(108,99,255,.4);box-shadow:0 4px 22px rgba(108,99,255,.18);transform:translateY(-2px) scale(1.013)}
+.ctile:hover::after{opacity:1}
+/* State borders */
+.ctile.c-deal{border-color:rgba(0,255,106,.25)!important}
+.ctile.c-deal::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.ctile.c-ending{border-color:rgba(255,215,0,.28)!important}
+.ctile.c-ending::before{background:linear-gradient(90deg,var(--gold),var(--pink));opacity:.9}
+.ctile.c-urgent{border-color:rgba(255,60,60,.45)!important;box-shadow:0 0 14px rgba(255,60,60,.2)!important}
+.ctile.c-urgent::before{background:linear-gradient(90deg,var(--red),#ff8800);animation:sline .65s ease infinite alternate;opacity:1}
+.ctile.alarm{animation:gpulse .6s ease infinite alternate}
 @keyframes sline{from{opacity:.45}to{opacity:1}}
-.card.alarm{animation:gpulse .6s ease infinite alternate}
-@keyframes gpulse{
-  from{box-shadow:0 0 0 rgba(255,60,60,0)}
-  to{box-shadow:0 0 44px 5px rgba(255,60,60,.48),0 0 100px 14px rgba(255,60,60,.12)}
-}
+@keyframes gpulse{from{box-shadow:none}to{box-shadow:0 0 38px 4px rgba(255,60,60,.45)}}
 
-/* Card header row */
-.ctop{display:flex;align-items:center;justify-content:space-between;margin-bottom:.58rem}
-.ccat{
-  font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--purple);
-  background:rgba(108,99,255,.1);padding:.13rem .48rem;border-radius:999px;border:1px solid rgba(108,99,255,.18);
-}
-.dscore{
-  font-size:.62rem;font-weight:800;padding:.13rem .48rem;border-radius:999px;
-}
+/* Top row: category + deal score */
+.ct-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.36rem;gap:.2rem}
+.ct-cat{font-size:.52rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dscore{font-size:.54rem;font-weight:800;padding:.1rem .35rem;border-radius:999px;flex-shrink:0}
 .ds-fire{background:rgba(0,255,106,.1);border:1px solid rgba(0,255,106,.28);color:var(--green)}
 .ds-warm{background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.24);color:var(--gold)}
 .ds-cool{background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.18);color:rgba(200,200,255,.55)}
 .ds-over{background:rgba(255,60,60,.08);border:1px solid rgba(255,60,60,.2);color:var(--red)}
 
-/* Image */
-.cimg{
-  width:100%;height:78px;border-radius:10px;
-  background:rgba(108,99,255,.055);border:1px solid rgba(108,99,255,.1);
-  display:flex;align-items:center;justify-content:center;
-  font-size:2rem;margin-bottom:.62rem;overflow:hidden;position:relative;
-}
-.cimg img{width:100%;height:100%;object-fit:cover;border-radius:10px}
-.cimg-shade{position:absolute;inset:0;border-radius:10px;background:linear-gradient(to bottom,transparent 40%,rgba(6,6,15,.65))}
+/* Icon */
+.ct-ico{font-size:1.55rem;text-align:center;margin:.18rem 0 .3rem;line-height:1;filter:drop-shadow(0 0 8px rgba(108,99,255,.4))}
 
 /* Title */
-.ctitle{
-  font-size:.82rem;font-weight:600;line-height:1.35;margin-bottom:.65rem;
+.ct-title{
+  font-size:.65rem;font-weight:600;line-height:1.32;margin-bottom:.38rem;flex:1;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  color:rgba(220,220,255,.88);
 }
 
-/* Metrics row: price + ring */
-.cmetrics{display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem;gap:.4rem}
-.cprice-block{flex:1;min-width:0}
-.cprice{
-  font-size:1.3rem;font-weight:900;line-height:1;
-  font-variant-numeric:tabular-nums;transition:color .3s;
-}
-.cp-under{color:var(--green)}
-.cp-near{color:var(--gold)}
-.cp-over{color:var(--red)}
+/* Price */
+.ct-price{font-size:1.05rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;margin-bottom:.22rem}
+.cp-under{color:var(--green)}.cp-near{color:var(--gold)}.cp-over{color:var(--red)}
 .cp-flash{animation:pflash .35s ease}
-@keyframes pflash{0%,100%{opacity:1}50%{opacity:.25;transform:scale(1.06)}}
-.cvsmax{font-size:.65rem;color:var(--muted);margin-top:.1rem}
-.cvsmax span{color:rgba(200,200,255,.65);font-weight:600}
+@keyframes pflash{0%,100%{opacity:1}50%{opacity:.2;transform:scale(1.08)}}
 
-/* Countdown ring */
-.ring-wrap{position:relative;flex-shrink:0;width:64px;height:64px}
-.ring-wrap svg{position:absolute;inset:0;width:100%;height:100%}
-.ring-inner{
-  position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;line-height:1;
-}
-.ring-val{font-size:.68rem;font-weight:900;font-family:'Courier New',monospace;text-align:center;white-space:nowrap}
-.ring-lbl{font-size:.48rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:.08rem}
+/* Meta row */
+.ct-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem;gap:.2rem}
+.ct-max{font-size:.54rem;color:var(--muted);white-space:nowrap}
+.ct-time{font-size:.58rem;font-weight:800;font-family:'Courier New',monospace;color:rgba(200,200,255,.6);white-space:nowrap}
+.ct-time.ct-urg{color:var(--red);animation:blink .7s ease infinite alternate}
+.ct-time.ct-end{color:var(--gold)}
 
-/* Sub info */
-.csub{
-  display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;margin-bottom:.6rem;
-}
-.cbadge{
-  font-size:.6rem;font-weight:700;padding:.1rem .4rem;border-radius:4px;
-  background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.13);
-  color:rgba(200,200,255,.5);
-}
-
-/* Bottom row */
-.cbot{display:flex;align-items:center;gap:.45rem}
-.cst{
-  display:inline-flex;align-items:center;gap:.22rem;
-  padding:.16rem .5rem;border-radius:999px;font-size:.6rem;font-weight:800;flex-shrink:0;
-}
-.st-live{background:rgba(0,255,106,.07);border:1px solid rgba(0,255,106,.22);color:var(--green)}
-.st-end{background:rgba(255,215,0,.09);border:1px solid rgba(255,215,0,.28);color:var(--gold)}
-.st-urg{background:rgba(255,60,60,.11);border:1px solid rgba(255,60,60,.38);color:var(--red);animation:stpulse .6s ease infinite alternate}
-@keyframes stpulse{from{box-shadow:none}to{box-shadow:0 0 8px rgba(255,60,60,.4)}}
-.st-done{background:rgba(80,80,100,.1);border:1px solid rgba(80,80,100,.18);color:rgba(200,200,255,.28)}
-.cbid{
-  flex:1;display:block;text-align:center;padding:.38rem .5rem;border-radius:8px;
+/* Bid button */
+.ct-btn{
+  display:block;width:100%;text-align:center;
+  padding:.3rem .3rem;border-radius:7px;font-size:.6rem;font-weight:800;
   background:linear-gradient(130deg,var(--purple),var(--pink));color:#fff;
-  font-size:.7rem;font-weight:800;text-decoration:none;transition:all .2s;letter-spacing:.03em;
+  letter-spacing:.04em;transition:opacity .15s,transform .15s;margin-top:auto;
 }
-.cbid:hover{box-shadow:0 4px 20px rgba(108,99,255,.48);transform:translateY(-1px)}
-.cbid.snipe{
-  background:linear-gradient(130deg,var(--red),#ff7a00);letter-spacing:.06em;
-  animation:snipeg .5s ease infinite alternate;
-}
-@keyframes snipeg{from{box-shadow:0 0 6px rgba(255,60,60,.4)}to{box-shadow:0 0 22px rgba(255,60,60,.7),0 0 50px rgba(255,60,60,.18)}}
+.ctile:hover .ct-btn{opacity:.9;transform:translateY(-1px)}
+.ct-btn.ct-snipe{background:linear-gradient(130deg,var(--red),#ff8800);animation:sline .5s ease infinite alternate}
+
+/* Sub info / badges (kept for compat) */
+.csub{display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;margin-bottom:.4rem}
+.cbadge{font-size:.58rem;font-weight:700;padding:.08rem .35rem;border-radius:4px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.13);color:rgba(200,200,255,.5)}
 
 /* ══ ACTIVITY ══ */
-.act-col{position:sticky;top:58px;max-height:calc(100vh - 76px);overflow-y:auto}
+.act-col{max-height:340px;overflow-y:auto}
 .act-head{
   display:flex;align-items:center;justify-content:space-between;
   padding:.85rem 1.05rem;border-bottom:1px solid rgba(108,99,255,.09);
@@ -468,7 +430,7 @@ select option{background:#0b0b1e}
   <div class="main">
 
     <!-- ══ LEFT SIDEBAR ══ -->
-    <div>
+    <div class="left-col">
       <div class="panel">
         <!-- Add form -->
         <div class="phead">
@@ -529,25 +491,26 @@ select option{background:#0b0b1e}
           <button class="btn btn-ghost" style="margin-top:.75rem;font-size:.75rem" onclick="triggerScan()">↻  Scan Now  <kbd style="font-size:.6rem;opacity:.5;margin-left:.3rem">R</kbd></button>
         </div>
       </div>
+
+      <!-- ══ ACTIVITY ══ -->
+      <div class="panel act-col">
+        <div class="act-head">
+          <div class="ptitle">Activity Feed</div>
+          <button class="clrbtn" onclick="clearAct()">Clear</button>
+        </div>
+        <div class="act-feed" id="nlist"></div>
+      </div>
     </div>
 
     <!-- ══ ITEM GRID ══ -->
     <div>
       <div id="items-grid"></div>
+      <div id="pagination"></div>
       <div class="empty-state" id="empty-st">
         <div class="empty-ico">⚡</div>
         <div class="empty-title">No auctions tracked yet</div>
         <div class="empty-sub">Add keywords to your watchlist — AuctionWatch will find matching Nellis auctions and alert you before they end</div>
       </div>
-    </div>
-
-    <!-- ══ ACTIVITY ══ -->
-    <div class="panel act-col">
-      <div class="act-head">
-        <div class="ptitle">Activity Feed</div>
-        <button class="clrbtn" onclick="clearAct()">Clear</button>
-      </div>
-      <div class="act-feed" id="nlist"></div>
     </div>
 
   </div>
@@ -612,15 +575,32 @@ select option{background:#0b0b1e}
    MOCK DATA
    ========================================================= */
 const EMO={electronics:'💻',watches:'⌚',collectibles:'🏆',fashion:'👟',sports:'⚽',art:'🎨','':'📦'};
+const NELLIS='https://www.nellisauction.com';
 const MOCK=[
-  {id:1,title:'Vintage Rolex Submariner 1960s Ref 5513',category:'watches',price:4.50,end:Date.now()+28000,url:'#',img:'',premium:0},
-  {id:2,title:'Apple MacBook Pro M2 16" Factory Sealed',category:'electronics',price:3.75,end:Date.now()+162000,url:'#',img:'',premium:0},
-  {id:3,title:'Michael Jordan 1986 Fleer Rookie PSA 9',category:'collectibles',price:2.00,end:Date.now()+7200000,url:'#',img:'',premium:0},
-  {id:4,title:'Nike Air Jordan 1 Retro High OG Bred DS',category:'fashion',price:1.00,end:Date.now()+86400000,url:'#',img:'',premium:0},
-  {id:5,title:'Bose QuietComfort 45 Wireless Headphones',category:'electronics',price:4.99,end:Date.now()+52000,url:'#',img:'',premium:0},
-  {id:6,title:'Andy Warhol Signed Marilyn Monroe Print',category:'art',price:6.00,end:Date.now()+3600000,url:'#',img:'',premium:0},
-  {id:7,title:'Omega Speedmaster Moonwatch 2021 Set',category:'watches',price:3.20,end:Date.now()+24000,url:'#',img:'',premium:0},
-  {id:8,title:'PlayStation 5 Digital Edition Bundle',category:'electronics',price:2.50,end:Date.now()+44000,url:'#',img:'',premium:0},
+  {id:1,title:'Vintage Rolex Submariner 1960s Ref 5513',category:'watches',price:4.50,end:Date.now()+28000,url:NELLIS+'/search?q=rolex',img:'',premium:0},
+  {id:2,title:'Apple MacBook Pro M2 16" Factory Sealed',category:'electronics',price:3.75,end:Date.now()+162000,url:NELLIS+'/search?q=macbook',img:'',premium:0},
+  {id:3,title:'Michael Jordan 1986 Fleer Rookie PSA 9',category:'collectibles',price:2.00,end:Date.now()+7200000,url:NELLIS+'/search?q=jordan+card',img:'',premium:0},
+  {id:4,title:'Nike Air Jordan 1 Retro High OG Bred DS',category:'fashion',price:1.00,end:Date.now()+86400000,url:NELLIS+'/search?q=jordan+1',img:'',premium:0},
+  {id:5,title:'Bose QuietComfort 45 Wireless Headphones',category:'electronics',price:4.99,end:Date.now()+52000,url:NELLIS+'/search?q=bose+headphones',img:'',premium:0},
+  {id:6,title:'Andy Warhol Signed Marilyn Monroe Print',category:'art',price:6.00,end:Date.now()+3600000,url:NELLIS+'/search?q=warhol',img:'',premium:0},
+  {id:7,title:'Omega Speedmaster Moonwatch 2021 Set',category:'watches',price:3.20,end:Date.now()+24000,url:NELLIS+'/search?q=omega+speedmaster',img:'',premium:0},
+  {id:8,title:'PlayStation 5 Digital Edition Bundle',category:'electronics',price:2.50,end:Date.now()+44000,url:NELLIS+'/search?q=ps5',img:'',premium:0},
+  {id:9,title:'Louis Vuitton Neverfull MM Monogram Tote',category:'fashion',price:5.50,end:Date.now()+95000,url:NELLIS+'/search?q=louis+vuitton',img:'',premium:0},
+  {id:10,title:'Nikon Z9 Mirrorless Camera Body',category:'electronics',price:3.10,end:Date.now()+190000,url:NELLIS+'/search?q=nikon+z9',img:'',premium:0},
+  {id:11,title:'Hermès Birkin 30 Togo Leather Gold',category:'fashion',price:7.00,end:Date.now()+31000,url:NELLIS+'/search?q=hermes+birkin',img:'',premium:0},
+  {id:12,title:'1952 Topps Mickey Mantle Rookie Card',category:'collectibles',price:2.75,end:Date.now()+5400000,url:NELLIS+'/search?q=mantle+topps',img:'',premium:0},
+  {id:13,title:'Patek Philippe Nautilus 5711 Blue Dial',category:'watches',price:5.00,end:Date.now()+19000,url:NELLIS+'/search?q=patek+philippe',img:'',premium:0},
+  {id:14,title:'Apple iPhone 15 Pro Max 512GB Natural',category:'electronics',price:2.25,end:Date.now()+73000,url:NELLIS+'/search?q=iphone+15+pro',img:'',premium:0},
+  {id:15,title:'Banksy "Girl with Balloon" Signed Print',category:'art',price:4.00,end:Date.now()+2700000,url:NELLIS+'/search?q=banksy',img:'',premium:0},
+  {id:16,title:'Chanel Classic Flap Medium Caviar Black',category:'fashion',price:6.50,end:Date.now()+41000,url:NELLIS+'/search?q=chanel+flap',img:'',premium:0},
+  {id:17,title:'Lego Millennium Falcon 75192 Sealed',category:'collectibles',price:3.50,end:Date.now()+480000,url:NELLIS+'/search?q=lego+millennium+falcon',img:'',premium:0},
+  {id:18,title:'Tag Heuer Carrera Calibre 16 Chronograph',category:'watches',price:2.80,end:Date.now()+67000,url:NELLIS+'/search?q=tag+heuer+carrera',img:'',premium:0},
+  {id:19,title:'Sony PlayStation VR2 Headset Bundle',category:'electronics',price:1.75,end:Date.now()+58000,url:NELLIS+'/search?q=psvr2',img:'',premium:0},
+  {id:20,title:'Gucci Dionysus GG Supreme Canvas Medium',category:'fashion',price:4.25,end:Date.now()+82000,url:NELLIS+'/search?q=gucci+dionysus',img:'',premium:0},
+  {id:21,title:'Pokémon Charizard Holo 1st Edition PSA 8',category:'collectibles',price:3.90,end:Date.now()+14000,url:NELLIS+'/search?q=charizard+psa',img:'',premium:0},
+  {id:22,title:'Cartier Love Bracelet 18K Yellow Gold',category:'watches',price:5.80,end:Date.now()+35000,url:NELLIS+'/search?q=cartier+love',img:'',premium:0},
+  {id:23,title:'DJI Mavic 3 Pro Drone Fly More Combo',category:'electronics',price:2.60,end:Date.now()+110000,url:NELLIS+'/search?q=dji+mavic+3',img:'',premium:0},
+  {id:24,title:'Yeezy Boost 350 V2 Zebra DS Size 10',category:'fashion',price:1.50,end:Date.now()+99000,url:NELLIS+'/search?q=yeezy+zebra',img:'',premium:0},
 ];
 
 /* =========================================================
@@ -818,8 +798,11 @@ function scanFor(w){
 }
 
 /* =========================================================
-   ITEMS RENDER
+   ITEMS RENDER  (24 per page, 8 per row compact tiles)
    ========================================================= */
+const PAGE_SIZE=24;
+let currentPage=0;
+
 function sorted(arr){
   const mode=document.getElementById('sort-sel').value;
   const now=Date.now();
@@ -836,6 +819,7 @@ function sorted(arr){
 
 function renderItems(){
   const grid=document.getElementById('items-grid');
+  const pgEl=document.getElementById('pagination');
   const empty=document.getElementById('empty-st');
   const now=Date.now();
 
@@ -844,79 +828,64 @@ function renderItems(){
   let items=activeCat==='all'?live:live.filter(i=>(i.category||'')===activeCat);
   document.getElementById('fcount').textContent=items.length+' item'+(items.length!==1?'s':'');
 
-  if(!items.length){grid.innerHTML='';empty.style.display='flex';return}
+  if(!items.length){grid.innerHTML='';pgEl.innerHTML='';empty.style.display='flex';return}
   empty.style.display='none';
 
-  grid.innerHTML=sorted(items).map(item=>{
+  const all=sorted(items);
+  const totalPages=Math.max(1,Math.ceil(all.length/PAGE_SIZE));
+  currentPage=Math.min(currentPage,totalPages-1);
+  const page=all.slice(currentPage*PAGE_SIZE,(currentPage+1)*PAGE_SIZE);
+
+  grid.innerHTML=page.map(item=>{
     const rem=item.end-now;
     const urgent=rem>0&&rem<=60000;
     const ending=rem>0&&rem<=300000;
-    const hot=item.price<=item.th;
+    const hot=item.th>0&&item.price<=item.th;
     const alarm=urgent&&hot;
     const ds=dealScore(item.price,item.th);
     const dc=dealClass(ds);
-
-    // Price class
-    const ratio=item.price/item.th;
+    const ratio=item.th>0?item.price/item.th:1;
     const pc=hot?(ratio<.5?'cp-under':'cp-near'):'cp-over';
-
-    // Card state class
     const cc=urgent?' c-urgent':ending?' c-ending':hot?' c-deal':'';
+    const timeStr=rem<=0?'ENDED':fmt(rem);
+    const url=item.url&&item.url!=='#'?item.url:NELLIS;
+    const btnLbl=urgent?'🚨 SNIPE NOW':'View &amp; Bid ↗';
 
-    // Status
-    let stc,stl;
-    if(rem<=0){stc='st-done';stl='ENDED'}
-    else if(urgent){stc='st-urg';stl='🚨 SNIPE NOW'}
-    else if(ending){stc='st-end';stl='⚡ ENDING'}
-    else{stc='st-live';stl='◉ LIVE'}
-
-    // Bid button
-    const hasBid=item.url&&item.url!=='#';
-    const bidBtn=hasBid
-      ?`<a class="cbid${urgent?' snipe':''}" href="${item.url}" target="_blank" rel="noopener">${urgent?'🚨 BID NOW ↗':'View &amp; Bid ↗'}</a>`
-      :`<span class="cbid" style="opacity:.28;cursor:default;background:rgba(108,99,255,.15)">No Link</span>`;
-
-    // Image
-    const imgInner=item.img
-      ?`<img src="${item.img}" alt="" loading="lazy"><div class="cimg-shade"></div>`
-      :`<span style="filter:drop-shadow(0 0 12px rgba(108,99,255,.45))">${item.emoji||'📦'}</span>`;
-
-    // Premium row
-    const subRow=item.premium
-      ?`<div class="csub"><span class="cbadge">+$${item.premium.toFixed(2)} premium</span><span class="cbadge">~$${(item.price+item.premium).toFixed(2)} total</span></div>`
-      :`<div style="height:.5rem"></div>`;
-
-    return`<div class="cw">
-      <div class="card${alarm?' alarm':''}" onmousemove="tilt(this,event)" onmouseleave="untilt(this)">
-        <div class="cf${cc}">
-          <div class="ctop">
-            <span class="ccat">${item.category||'General'}</span>
-            <span class="dscore ${dc}">${dealScore(item.price,item.th)}% OFF</span>
-          </div>
-          <div class="cimg">${imgInner}</div>
-          <div class="ctitle">${item.title}</div>
-          <div class="cmetrics">
-            <div class="cprice-block">
-              <div class="cprice ${pc}">$${item.price.toFixed(2)}</div>
-              <div class="cvsmax">max <span>$${item.th.toFixed(2)}</span></div>
-            </div>
-            ${ring(rem)}
-          </div>
-          ${subRow}
-          <div class="cbot">
-            <span class="cst ${stc}">${stl}</span>
-            ${bidBtn}
-          </div>
-        </div>
+    return`<a class="ctile${cc}${alarm?' alarm':''}" href="${url}" target="_blank" rel="noopener"
+        onmousemove="tilt(this,event)" onmouseleave="untilt(this)">
+      <div class="ct-top">
+        <span class="ct-cat">${item.category||'misc'}</span>
+        <span class="dscore ${dc}">${ds}%</span>
       </div>
-    </div>`;
+      <div class="ct-ico">${item.emoji||'📦'}</div>
+      <div class="ct-title">${item.title}</div>
+      <div class="ct-price ${pc}">$${item.price.toFixed(2)}</div>
+      <div class="ct-meta">
+        <span class="ct-max">max $${(item.th||0).toFixed(2)}</span>
+        <span class="ct-time${urgent?' ct-urg':ending?' ct-end':''}">${timeStr}</span>
+      </div>
+      <div class="ct-btn${urgent?' ct-snipe':''}">${btnLbl}</div>
+    </a>`;
   }).join('');
+
+  // Pagination controls
+  if(totalPages<=1){pgEl.innerHTML='';return}
+  let pHtml=`<button class="pg-btn" onclick="goPage(${currentPage-1})" ${currentPage===0?'disabled':''}>‹ Prev</button>`;
+  const start=Math.max(0,currentPage-2),end=Math.min(totalPages-1,currentPage+2);
+  if(start>0)pHtml+=`<button class="pg-btn" onclick="goPage(0)">1</button>${start>1?'<span class="pg-info">…</span>':''}`;
+  for(let i=start;i<=end;i++)pHtml+=`<button class="pg-btn${i===currentPage?' pg-active':''}" onclick="goPage(${i})">${i+1}</button>`;
+  if(end<totalPages-1)pHtml+=`${end<totalPages-2?'<span class="pg-info">…</span>':''}<button class="pg-btn" onclick="goPage(${totalPages-1})">${totalPages}</button>`;
+  pHtml+=`<button class="pg-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages-1?'disabled':''}>Next ›</button>`;
+  pHtml+=`<span class="pg-info">Page ${currentPage+1} of ${totalPages} · ${all.length} items</span>`;
+  pgEl.innerHTML=pHtml;
 }
+
+function goPage(p){currentPage=p;renderItems();window.scrollTo({top:document.getElementById('items-grid').offsetTop-80,behavior:'smooth'})}
 
 function tilt(el,e){
   const r=el.getBoundingClientRect();
   const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
-  el.style.transform=`rotateY(${x*17}deg) rotateX(${-y*13}deg) translateZ(10px)`;
+  el.style.transform=`rotateY(${x*14}deg) rotateX(${-y*10}deg) scale(1.02)`;
 }
 function untilt(el){el.style.transform=''}
 
