@@ -5,6 +5,7 @@ const path  = require('path');
 const { WebSocketServer } = require('ws');
 const cron  = require('node-cron');
 const { searchNellis, closeBrowser } = require('./scraper');
+const notifier = require('./notifier');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const anthropic = process.env.ANTHROPIC_API_KEY
@@ -113,6 +114,7 @@ function checkAlerts() {
       alerted.add(item.id);
       broadcast({ type: 'alert', item });
       console.log(`[alert] "${item.title.slice(0, 50)}" — $${item.price} — ${Math.floor(rem / 1000)}s left — ${item.url}`);
+      notifier.sendAlert(item).catch(e => console.error('[notifier]', e.message));
     }
   });
 }
@@ -308,6 +310,27 @@ Your role: help the user win great deals. Be concise and direct. Use **bold** fo
     }
     res.write('data: [DONE]\n\n');
     return res.end();
+  }
+
+  // ── POST /api/test-alert  (fires a test notification) ──
+  if (url === '/api/test-alert' && req.method === 'POST') {
+    const body = await readBody(req).catch(() => null);
+    const item = body || { id: 'test', title: 'TEST — AuctionWatch Alert', price: 1.99, th: 5.00, end: Date.now() + 45000, url: 'https://www.nellisauction.com' };
+    notifier.sendAlert(item).catch(e => console.error('[notifier]', e.message));
+    return sendJSON(res, 200, { queued: true });
+  }
+
+  // ── GET /api/notifications ──
+  if (url === '/api/notifications' && req.method === 'GET')
+    return sendJSON(res, 200, notifier.loadConfig());
+
+  // ── POST /api/notifications ──
+  if (url === '/api/notifications' && req.method === 'POST') {
+    const body = await readBody(req).catch(() => null);
+    if (!body) return sendJSON(res, 400, { error: 'bad body' });
+    const cfg = { email: body.email || '', phone: body.phone || '' };
+    notifier.saveConfig(cfg);
+    return sendJSON(res, 200, cfg);
   }
 
   res.writeHead(404); res.end();

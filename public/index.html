@@ -492,6 +492,27 @@ select option{background:#0b0b1e}
         </div>
       </div>
 
+      <!-- ══ NOTIFICATIONS ══ -->
+      <div class="panel" style="margin-top:.95rem" id="notif-panel">
+        <div class="phead">
+          <div class="ptitle">Alert Delivery</div>
+          <div class="pbadge" id="notif-badge" style="background:rgba(100,100,100,.15);border-color:rgba(100,100,100,.2);color:var(--muted)">OFF</div>
+        </div>
+        <div class="pbody">
+          <div class="fcol">
+            <div class="iw"><span class="ii" style="font-size:.8rem">✉️</span><input id="notif-email" type="email" placeholder="Alert email  (optional)" autocomplete="off"></div>
+            <div class="iw"><span class="ii" style="font-size:.8rem">📱</span><input id="notif-phone" type="tel" placeholder="SMS phone  +1 (optional)" autocomplete="off"></div>
+            <div style="display:flex;gap:.5rem;margin-top:.2rem">
+              <button class="btn" style="flex:1" onclick="saveNotifSettings()">💾 Save</button>
+              <button class="btn btn-ghost" style="flex:1;font-size:.72rem" onclick="testNotifSettings()">🔔 Test</button>
+            </div>
+            <div id="notif-hint" style="font-size:.63rem;color:var(--muted);text-align:center;margin-top:.35rem;line-height:1.45">
+              Configure SMTP &amp; Twilio in <code style="font-size:.65rem;color:rgba(108,99,255,.8)">.env</code> to enable delivery
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ ACTIVITY ══ -->
       <div class="panel act-col">
         <div class="act-head">
@@ -1048,6 +1069,7 @@ function tick(){
       document.getElementById('live-lbl').textContent='LIVE';
       notify('ok','Backend connected','Live Nellis data — demo suspended');
       term('Backend connected. Live mode active.','ok');
+      loadNotifSettings();
     };
 
     ws.onmessage=e=>{
@@ -1135,6 +1157,56 @@ function tick(){
 
   connect();
 })();
+
+/* =========================================================
+   NOTIFICATION SETTINGS
+   ========================================================= */
+function updateNotifBadge(cfg){
+  const badge=document.getElementById('notif-badge');
+  const hint=document.getElementById('notif-hint');
+  const on=cfg.email||cfg.phone;
+  badge.textContent=on?'ON':'OFF';
+  badge.style.background=on?'rgba(0,255,106,.06)':'rgba(100,100,100,.15)';
+  badge.style.borderColor=on?'rgba(0,255,106,.22)':'rgba(100,100,100,.2)';
+  badge.style.color=on?'var(--green)':'var(--muted)';
+  const parts=[];
+  if(cfg.email)parts.push('Email: '+cfg.email);
+  if(cfg.phone)parts.push('SMS: '+cfg.phone);
+  hint.textContent=on?parts.join(' · '):'Configure SMTP & Twilio in .env to enable delivery';
+}
+
+function loadNotifSettings(){
+  fetch('/api/notifications').then(r=>r.ok?r.json():null).then(cfg=>{
+    if(!cfg)return;
+    if(cfg.email)document.getElementById('notif-email').value=cfg.email;
+    if(cfg.phone)document.getElementById('notif-phone').value=cfg.phone;
+    updateNotifBadge(cfg);
+  }).catch(()=>{});
+}
+
+function saveNotifSettings(){
+  const email=document.getElementById('notif-email').value.trim();
+  const phone=document.getElementById('notif-phone').value.trim();
+  fetch('/api/notifications',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,phone})
+  }).then(r=>r.json()).then(cfg=>{
+    updateNotifBadge(cfg);
+    notify('ok','Alert delivery saved',cfg.email||cfg.phone?'Will notify when items hit your threshold with &lt;60s left':'Notifications cleared');
+    term('Notification settings saved','ok');
+  }).catch(()=>notify('info','No backend','Start the server to save notification settings'));
+}
+
+function testNotifSettings(){
+  const email=document.getElementById('notif-email').value.trim();
+  const phone=document.getElementById('notif-phone').value.trim();
+  if(!email&&!phone){notify('info','Nothing to test','Enter an email or phone number first');return;}
+  const fake={id:'test-'+Date.now(),title:'TEST — AuctionWatch Alert Delivery',price:1.99,th:5.00,end:Date.now()+45000,url:'https://www.nellisauction.com'};
+  fetch('/api/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,phone})})
+    .then(()=>fetch('/api/test-alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fake)}))
+    .then(()=>{notify('ok','Test alert sent','Check your email / phone');term('Test alert fired','ok');})
+    .catch(()=>notify('info','No backend','Start the server to test alerts'));
+}
 
 /* =========================================================
    INIT
