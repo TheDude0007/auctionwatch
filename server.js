@@ -13,7 +13,7 @@ const anthropic = process.env.ANTHROPIC_API_KEY
   : null;
 
 const PORT           = parseInt(process.env.PORT || '3010');
-const SCAN_CRON      = process.env.SCAN_CRON || '0 8 * * *';
+const SCAN_CRON      = process.env.SCAN_CRON || '50 16 * * *'; // 4:50 PM — before auctions open at 5 PM
 const DATA_DIR       = process.env.DATA_DIR || __dirname;
 const WATCHLIST_FILE = path.join(DATA_DIR, 'watchlist.json');
 
@@ -28,7 +28,8 @@ function saveWatchlist() {
 
 let watchlist = loadWatchlist(); // [{ id, kw, th, cat }]
 let liveItems = [];              // current auction items from Nellis
-const alerted = new Set();
+const alerted   = new Set();    // items where alert was fired
+const discarded = new Set();    // items dropped because price > threshold at 10-min mark
 
 // ── Mock data (used when MOCK_MODE=true or scrape fails on first run) ──
 function getMockItems(keyword, maxPrice) {
@@ -107,17 +108,34 @@ async function runScan(targetKeyword = null) {
 }
 
 // ── Alert Monitor (every 15 s — checks local cache only, no web request) ──
+// At 10-min mark: alert if price ≤ threshold, discard if price > threshold.
 function checkAlerts() {
   const now = Date.now();
+  let changed = false;
+
   liveItems.forEach(item => {
     const rem = item.end - now;
-    if (rem > 0 && rem <= 60_000 && item.price <= item.th && !alerted.has(item.id)) {
-      alerted.add(item.id);
-      broadcast({ type: 'alert', item });
-      console.log(`[alert] "${item.title.slice(0, 50)}" — $${item.price} — ${Math.floor(rem / 1000)}s left — ${item.url}`);
-      notifier.sendAlert(item).catch(e => console.error('[notifier]', e.message));
+    if (rem <= 0 || alerted.has(item.id) || discarded.has(item.id)) return;
+
+    if (rem <= 600_000) { // within 10 minutes
+      if (item.price <= item.th) {
+        alerted.add(item.id);
+        broadcast({ type: 'alert', item });
+        console.log(`[alert] "${item.title.slice(0, 50)}" — $${item.price} — ${Math.floor(rem / 1000)}s left — ${item.url}`);
+        notifier.sendAlert(item).catch(e => console.error('[notifier]', e.message));
+      } else {
+        discarded.add(item.id);
+        broadcast({ type: 'discard', item });
+        console.log(`[discard] "${item.title.slice(0, 50)}" — $${item.price} > $${item.th} — dropped`);
+        changed = true;
+      }
     }
   });
+
+  if (changed) {
+    liveItems = liveItems.filter(i => !discarded.has(i.id));
+    broadcast({ type: 'scan_complete', items: liveItems, ts: Date.now() });
+  }
 }
 
 // ── Price refresh for soon-ending items ──────────────────────
@@ -383,6 +401,6 @@ server.listen(PORT, () => {
   console.log(`   UI          → http://localhost:${PORT}`);
   console.log(`   Mode        : ${MOCK_MODE ? 'MOCK (set MOCK_MODE=false to go live)' : 'LIVE (Playwright/Nellis)'}`);
   console.log(`   Daily scan  : ${SCAN_CRON}  (±5 min jitter)`);
-  console.log(`   Alert gate  : price ≤ threshold AND ≤ 60s remaining`);
+  console.log(`   Alert gate  : price ≤ threshold AND ≤ 10 min remaining → alert; price > threshold → discard`);
   console.log(`   Price refresh: every 5 min for items ending within 90 min\n`);
 });

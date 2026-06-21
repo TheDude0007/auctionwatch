@@ -483,7 +483,7 @@ select option{background:#0b0b1e}
           <div style="margin-top:.9rem">
             <div class="ptitle" style="margin-bottom:.5rem">Daily Schedule</div>
             <div class="time-row">
-              <input type="time" id="scan-time" value="08:00">
+              <input type="time" id="scan-time" value="16:50">
               <button class="btn" onclick="setScanTime()">Set</button>
             </div>
             <div id="snxt-abs" style="font-size:.64rem;color:var(--muted);text-align:center"></div>
@@ -692,6 +692,7 @@ function alertSound(){
    ========================================================= */
 let watches=[],live=[],alertCount=0,scanPct=0;
 const alerted=new Set();
+const discarded=new Set();
 let backendConnected=false;
 let activeCat='all';
 
@@ -774,7 +775,7 @@ function addWatch(){
   const w={id:Date.now(),kw,th,cat,emoji:EMO[cat]||'📦'};
   watches.push(w);
   renderWatches();updateStats();
-  notify('info',`Watching "${kw}"`,`Will alert at ≤ $${th.toFixed(2)} with &lt;1 min left`);
+  notify('info',`Watching "${kw}"`,`Will alert at ≤ $${th.toFixed(2)} with 10 min left — discards if over`);
   term(`Watching "${kw}" — threshold $${th.toFixed(2)}`,'ok');
   scanFor(w);
   document.getElementById('kw').value='';
@@ -973,7 +974,7 @@ function updateStats(){
 /* =========================================================
    SCAN SCHEDULE
    ========================================================= */
-let schedH=8,schedM=0;
+let schedH=16,schedM=50;
 
 function setScanTime(){
   const v=document.getElementById('scan-time').value;
@@ -1032,14 +1033,21 @@ function tick(){
     // Alert check
     live.forEach(item=>{
       const rem=item.end-now;
-      if(rem>0&&rem<=60000&&item.price<=item.th&&!alerted.has(item.id)){
-        alerted.add(item.id);alertCount++;
-        toast('Bid Now!',`<strong>${item.title.slice(0,48)}</strong><br>${fmt(rem)} left · <strong>$${item.price.toFixed(2)}</strong>`);
-        notify('alert',`🚨 &lt;1 Min: ${item.title.slice(0,34)}…`,`$${item.price.toFixed(2)} ≤ $${item.th} · ${fmt(rem)}`);
-        term(`ALERT "${item.title.slice(0,28)}" — $${item.price.toFixed(2)} — ${fmt(rem)}`,'err');
-        alertSound();
-        if(Notification.permission==='granted')
-          new Notification('⚡ AuctionWatch',{body:`${item.title.slice(0,50)}\n$${item.price.toFixed(2)} — ${fmt(rem)} left!`});
+      if(rem>0&&rem<=600000&&!alerted.has(item.id)&&!discarded.has(item.id)){
+        if(item.price<=item.th){
+          alerted.add(item.id);alertCount++;
+          toast('Bid Now!',`<strong>${item.title.slice(0,48)}</strong><br>${fmt(rem)} left · <strong>$${item.price.toFixed(2)}</strong>`);
+          notify('alert',`🚨 10 Min: ${item.title.slice(0,34)}…`,`$${item.price.toFixed(2)} ≤ $${item.th} · ${fmt(rem)}`);
+          term(`ALERT "${item.title.slice(0,28)}" — $${item.price.toFixed(2)} — ${fmt(rem)}`,'err');
+          alertSound();
+          if(Notification.permission==='granted')
+            new Notification('⚡ AuctionWatch',{body:`${item.title.slice(0,50)}\n$${item.price.toFixed(2)} — ${fmt(rem)} left!`});
+        }else{
+          discarded.add(item.id);
+          live=live.filter(i=>i.id!==item.id);
+          notify('info',`Dropped: ${item.title.slice(0,34)}…`,`$${item.price.toFixed(2)} exceeded max $${(item.th||0).toFixed(2)} at 10-min mark`);
+          term(`DISCARD "${item.title.slice(0,28)}" — $${item.price.toFixed(2)} > $${item.th}`,'warn');
+        }
       }
     });
     // Animate scan bar in demo
@@ -1114,13 +1122,21 @@ function tick(){
         const item=msg.item;const rem=item.end-Date.now();
         alertCount++;updateStats();
         toast('Bid Now!',`<strong>${item.title.slice(0,48)}</strong><br>${fmt(rem)} left · <strong>$${item.price.toFixed(2)}</strong>`);
-        notify('alert',`🚨 &lt;1 Min: ${item.title.slice(0,34)}…`,
+        notify('alert',`🚨 10 Min: ${item.title.slice(0,34)}…`,
           `$${item.price.toFixed(2)} ≤ $${item.th} · ${fmt(rem)}`+
           (item.url&&item.url!=='#'?` · <a href="${item.url}" target="_blank" style="color:var(--purple)">Bid ↗</a>`:''));
         term(`ALERT "${item.title.slice(0,28)}" — $${item.price.toFixed(2)} — ${fmt(rem)}`,'err');
         alertSound();
         if(Notification.permission==='granted')
           new Notification('⚡ AuctionWatch',{body:`${item.title.slice(0,50)}\n$${item.price.toFixed(2)} — ${fmt(rem)} left!`});
+      }
+
+      if(msg.type==='discard'){
+        const item=msg.item;
+        live=live.filter(i=>i.id!==item.id);
+        notify('info',`Dropped: ${item.title.slice(0,34)}…`,`$${item.price.toFixed(2)} exceeded max $${(item.th||0).toFixed(2)} at 10-min mark`);
+        term(`DISCARD "${item.title.slice(0,28)}" — $${item.price.toFixed(2)} > $${item.th}`,'warn');
+        renderItems();updateStats();
       }
     };
 
@@ -1192,7 +1208,7 @@ function saveNotifSettings(){
     body:JSON.stringify({email,phone})
   }).then(r=>r.json()).then(cfg=>{
     updateNotifBadge(cfg);
-    notify('ok','Alert delivery saved',cfg.email||cfg.phone?'Will notify when items hit your threshold with &lt;60s left':'Notifications cleared');
+    notify('ok','Alert delivery saved',cfg.email||cfg.phone?'Will notify when items hit your threshold with 10 min left':'Notifications cleared');
     term('Notification settings saved','ok');
   }).catch(()=>notify('info','No backend','Start the server to save notification settings'));
 }
