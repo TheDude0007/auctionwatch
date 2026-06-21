@@ -139,13 +139,15 @@ header{
   display:grid;grid-template-columns:260px 1fr;
   gap:.9rem;padding:.9rem 1.1rem;flex:1;align-items:start;
 }
-.left-col{display:flex;flex-direction:column;gap:.9rem;position:sticky;top:90px;max-height:calc(100vh - 110px);overflow-y:auto}
+.left-col{display:flex;flex-direction:column;gap:.9rem;position:sticky;top:90px;max-height:calc(100vh - 110px);overflow-y:auto;scrollbar-width:thin}
 
 /* ══ PANELS ══ */
 .panel{
   background:var(--panel);border:1px solid var(--border);
   border-radius:16px;backdrop-filter:blur(28px);overflow:hidden;
+  display:flex;flex-direction:column;
 }
+.panel-scroll{overflow-y:auto;flex:1;scrollbar-width:thin}
 .phead{
   padding:.9rem 1.1rem;border-bottom:1px solid rgba(108,99,255,.1);
   display:flex;align-items:center;justify-content:space-between;
@@ -497,8 +499,8 @@ select option{background:#0b0b1e}
         </div>
 
         <!-- Active watches -->
-        <div style="padding:0 1.1rem 1rem">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem">
+        <div class="panel-scroll" style="padding:0 1.1rem 1rem;max-height:220px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:.7rem 0 .55rem">
             <div class="ptitle">Active Watches</div>
             <span id="wl-ct" style="font-size:.62rem;color:var(--muted)"></span>
           </div>

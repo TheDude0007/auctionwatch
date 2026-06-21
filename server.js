@@ -40,20 +40,78 @@ let liveItems = [];              // current auction items from Nellis
 const alerted   = new Set();    // items where alert was fired
 const discarded = new Set();    // items dropped because price > threshold at 10-min mark
 
-// ── Mock data (used when MOCK_MODE=true or scrape fails on first run) ──
+// ── Mock data pool (used when MOCK_MODE=true) ──
+const MOCK_POOL = [
+  // Electronics
+  { id:'m01', title:'Apple MacBook Pro M3 16" Space Gray 36GB',     category:'electronics',  price:245.00, end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m02', title:'Apple MacBook Air M2 13" Midnight 8GB 256GB',  category:'electronics',  price:88.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m03', title:'Bose QuietComfort 45 Wireless Headphones Black',category:'electronics',  price:22.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m04', title:'Bose SoundLink Flex Bluetooth Speaker Stone Blue',category:'electronics', price:18.75,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m05', title:'Sony WH-1000XM5 Noise Cancelling Headphones',  category:'electronics',  price:31.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m06', title:'Apple iPad Pro 12.9" M2 Wi-Fi 256GB Silver',   category:'electronics',  price:175.00, end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m07', title:'Samsung 65" QLED 4K Smart TV QN65Q80C',        category:'electronics',  price:310.00, end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m08', title:'Dell XPS 15 Intel i9 RTX 4060 1TB Laptop',     category:'electronics',  price:195.00, end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  // Watches & Jewelry
+  { id:'m09', title:'Rolex Submariner Date 116610LN Black Dial',     category:'watches',      price:38.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m10', title:'Rolex Datejust 41 126300 Jubilee Bracelet',     category:'watches',      price:29.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m11', title:'Omega Seamaster 300M Co-Axial Master Chronometer',category:'watches',    price:41.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m12', title:'TAG Heuer Carrera Chronograph 43mm Stainless',  category:'watches',      price:19.25,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  // Collectibles
+  { id:'m13', title:'Michael Jordan 1986 Fleer Rookie PSA 7',        category:'collectibles', price:14.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m14', title:'Nike Air Jordan 1 Retro High OG Chicago 2015',  category:'collectibles', price:9.50,   end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m15', title:'Jordan Brand Lot — 12 Cards PSA Graded Mix',    category:'collectibles', price:7.75,   end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m16', title:'Pokémon 1st Edition Base Set Charizard PSA 6',  category:'collectibles', price:55.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m17', title:'Vintage Lego Star Wars Millennium Falcon 10179', category:'collectibles', price:28.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  // Fashion
+  { id:'m18', title:'Versace Black Medusa Small T-Shirt Men S',      category:'fashion',      price:11.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m19', title:'Versace Jeans Couture Logo Hoodie Black XL',    category:'fashion',      price:16.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m20', title:'Nike Air Jordan 1 Mid Black White Gym Red Sz 10',category:'fashion',     price:8.25,   end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m21', title:'Off-White x Nike Dunk Low Lot 34/50 DS Sz 9',  category:'fashion',      price:44.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m22', title:'Supreme Box Logo Hoodie FW22 Black Large',      category:'fashion',      price:21.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  // Sports / Misc
+  { id:'m23', title:'Callaway Paradym X Driver 9° Stiff HZRDUS',    category:'sports',       price:17.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m24', title:'Peloton Bike+ Smart Exercise Bike With Screen',  category:'sports',       price:88.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m25', title:'DJI Mini 4 Pro Drone Fly More Combo RC2',       category:'electronics',  price:62.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m26', title:'Apple Watch Ultra 2 49mm Titanium Alpine Band', category:'watches',      price:33.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m27', title:'KitchenAid 7qt Pro Line Stand Mixer Onyx Black',category:'electronics',  price:24.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m28', title:'Dyson V15 Detect Absolute Cordless Vacuum',     category:'electronics',  price:19.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m29', title:'Herman Miller Aeron Chair Size B Remastered',    category:'sports',       price:72.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m30', title:'Nintendo Switch OLED White + Mario Kart 8',      category:'electronics',  price:13.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m31', title:'Apple Mac Mini M2 Pro 16GB 512GB Silver',         category:'electronics',  price:182.00, end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m32', title:'Apple AirPods Pro 2nd Gen USB-C MagSafe Case',    category:'electronics',  price:28.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m33', title:'Rolex GMT-Master II 126710BLRO Pepsi Oyster',     category:'watches',      price:44.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m34', title:'Omega Speedmaster Professional Moonwatch 42mm',   category:'watches',      price:37.25,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m35', title:'Nike x Off-White Sneaker Collection DS Lot of 3', category:'fashion',      price:52.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m36', title:'Supreme FW23 Box Logo Crewneck Navy Medium',      category:'fashion',      price:19.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m37', title:'Versace Pour Homme EDT 3.4oz + Travel Spray Set', category:'fashion',      price:14.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m38', title:'Sony PlayStation 5 Slim Disc Edition White',      category:'electronics',  price:66.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m39', title:'Nike Air Max 90 "Infrared" 2023 Retro Sz 11',    category:'fashion',      price:11.75,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m40', title:'Dyson Airwrap Complete Long Styler Nickel/Copper', category:'electronics', price:42.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m41', title:'Jordan Retro 3 "Fire Red" 2022 DS Sz 10.5',      category:'fashion',      price:16.00,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+  { id:'m42', title:'Bose 700 Noise Cancelling Headphones Silver',     category:'electronics',  price:26.50,  end:0, url:'https://www.nellisauction.com', img:'', premium:0 },
+];
+
 function getMockItems(keyword, maxPrice) {
   const now = Date.now();
-  const pool = [
-    { id:'m1', title:`Vintage Rolex Submariner — "${keyword}" match`,   category:'watches',      price:4.50, end:now+28000,    url:'https://www.nellisauction.com', img:'' },
-    { id:'m2', title:`Apple MacBook Pro M2 — "${keyword}" result`,      category:'electronics',  price:3.75, end:now+162000,   url:'https://www.nellisauction.com', img:'' },
-    { id:'m3', title:`Jordan Card PSA 9 — "${keyword}" listing`,        category:'collectibles', price:2.00, end:now+7200000,  url:'https://www.nellisauction.com', img:'' },
-    { id:'m4', title:`Nike Air Jordan 1 — "${keyword}" DS`,             category:'fashion',      price:1.00, end:now+86400000, url:'https://www.nellisauction.com', img:'' },
-    { id:'m5', title:`Bose QC45 Headphones — "${keyword}" auction`,     category:'electronics',  price:4.99, end:now+52000,    url:'https://www.nellisauction.com', img:'' },
-  ];
-  return pool
-    .filter(i => i.title.toLowerCase().includes(keyword.toLowerCase()) || Math.random() > 0.4)
-    .filter(i => i.price <= maxPrice)
-    .slice(0, 3);
+  const kws = keyword.toLowerCase().split(/\s+/);
+
+  // Assign staggered end times in the 5 PM – 10 PM window (today)
+  const today5pm = new Date(); today5pm.setHours(17,0,0,0);
+  const today10pm = new Date(); today10pm.setHours(22,0,0,0);
+  const windowMs = today10pm - today5pm; // 5 hours
+
+  return MOCK_POOL
+    .filter(item => {
+      const t = item.title.toLowerCase();
+      return kws.some(k => t.includes(k));
+    })
+    .filter(item => item.price <= maxPrice)
+    .map((item, i) => {
+      // Spread end times evenly across the 5–10 PM auction window
+      const fraction = (i + Math.random() * 0.3) / MOCK_POOL.length;
+      const endTime = today5pm.getTime() + fraction * windowMs;
+      return { ...item, end: Math.max(endTime, now + 60_000) };
+    });
 }
 
 const MOCK_MODE = process.env.MOCK_MODE === 'true';
@@ -422,4 +480,20 @@ server.listen(PORT, () => {
   console.log(`   Daily scan  : ${SCAN_CRON}  (±5 min jitter)`);
   console.log(`   Alert gate  : price ≤ threshold AND ≤ 10 min remaining → alert; price > threshold → discard`);
   console.log(`   Price refresh: every 5 min for items ending within 90 min\n`);
+
+  // In mock mode, seed demo watches and auto-scan so the UI has data immediately
+  if (MOCK_MODE) {
+    if (!watchlist.length) {
+      watchlist = [
+        { id: 1, kws: ['macbook', 'apple', 'laptop'], mode: 'some', minMatch: 1, th: 999, tw: 10, cat: 'electronics' },
+        { id: 2, kws: ['rolex', 'omega', 'watch'],    mode: 'some', minMatch: 1, th: 999, tw: 10, cat: 'watches'     },
+        { id: 3, kws: ['jordan', 'nike', 'sneaker'],  mode: 'some', minMatch: 1, th: 999, tw: 10, cat: 'collectibles'},
+        { id: 4, kws: ['bose', 'sony', 'dyson'],      mode: 'some', minMatch: 1, th: 999, tw: 10, cat: 'electronics' },
+        { id: 5, kws: ['versace', 'supreme', 'off-white'], mode: 'some', minMatch: 1, th: 999, tw: 15, cat: 'fashion'},
+      ];
+      saveWatchlist();
+      console.log('[mock] seeded 5 demo watches');
+    }
+    setTimeout(runScan, 800);
+  }
 });
