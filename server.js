@@ -26,7 +26,16 @@ function saveWatchlist() {
   try { fs.writeFileSync(WATCHLIST_FILE, JSON.stringify(watchlist, null, 2)); } catch { /* ok */ }
 }
 
-let watchlist = loadWatchlist(); // [{ id, kw, th, cat }]
+// Keyword match: supports both legacy {kw} and new {kws, mode, minMatch}
+function matchesKeywords(title, w) {
+  const kws = w.kws || (w.kw ? [w.kw] : []);
+  if (!kws.length) return true;
+  const t = title.toLowerCase();
+  const hits = kws.filter(k => t.includes(k.toLowerCase())).length;
+  return w.mode === 'some' ? hits >= (w.minMatch || Math.ceil(kws.length / 2)) : hits === kws.length;
+}
+
+let watchlist = loadWatchlist(); // [{ id, kws[], mode, minMatch, th, tw, cat }]
 let liveItems = [];              // current auction items from Nellis
 const alerted   = new Set();    // items where alert was fired
 const discarded = new Set();    // items dropped because price > threshold at 10-min mark
@@ -57,7 +66,7 @@ async function runScan(targetKeyword = null) {
   scanInProgress = true;
 
   const targets = targetKeyword
-    ? watchlist.filter(w => w.kw === targetKeyword)
+    ? watchlist.filter(w => (w.kws||[w.kw]).join(' ') === targetKeyword)
     : watchlist;
 
   if (!targets.length) { scanInProgress = false; return; }
@@ -77,20 +86,29 @@ async function runScan(targetKeyword = null) {
     }
 
     try {
-      const items = MOCK_MODE
-        ? getMockItems(w.kw, w.th)
-        : await searchNellis(w.kw, w.th);
+      const kws  = w.kws || (w.kw ? [w.kw] : []);
+      const query = kws.join(' ');
+      const label = kws.join(', ');
 
-      items.forEach(item => {
+      const raw = MOCK_MODE
+        ? getMockItems(query, w.th)
+        : await searchNellis(query, w.th);
+
+      // Filter by keyword match logic before adding to results
+      const matched = raw.filter(item => matchesKeywords(item.title, w));
+
+      matched.forEach(item => {
         if (!seen.has(item.id)) {
           seen.add(item.id);
-          fresh.push({ ...item, wid: w.id, th: w.th, keyword: w.kw });
+          fresh.push({ ...item, wid: w.id, th: w.th, tw: w.tw, keyword: label });
         }
       });
 
-      broadcast({ type: 'keyword_done', keyword: w.kw, count: items.length });
+      console.log(`[scan] "${label}": ${raw.length} raw → ${matched.length} matched (${w.mode||'all'} keywords)`);
+      broadcast({ type: 'keyword_done', keyword: label, count: matched.length });
     } catch (err) {
-      console.error(`[scan] "${w.kw}" failed:`, err.message);
+      const label = (w.kws||[w.kw]).join(', ');
+      console.error(`[scan] "${label}" failed:`, err.message);
     }
   }
 

@@ -183,6 +183,35 @@ select option{background:#0b0b1e}
 .btn-ghost{background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.22);color:rgba(200,200,255,.65)}
 .btn-ghost:hover{background:rgba(108,99,255,.15);color:var(--text);box-shadow:none}
 
+/* ══ KEYWORD TAGS ══ */
+.tag-wrap{
+  background:rgba(255,255,255,.038);border:1px solid rgba(108,99,255,.16);border-radius:10px;
+  padding:.38rem .55rem;display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;
+  min-height:38px;cursor:text;transition:border-color .2s,box-shadow .2s;
+}
+.tag-wrap:focus-within{border-color:rgba(108,99,255,.55);box-shadow:0 0 0 3px rgba(108,99,255,.1)}
+.tag{
+  display:inline-flex;align-items:center;gap:.28rem;
+  padding:.18rem .5rem;border-radius:6px;font-size:.72rem;font-weight:700;
+  background:linear-gradient(130deg,rgba(108,99,255,.28),rgba(247,37,133,.14));
+  border:1px solid rgba(108,99,255,.35);color:var(--text);white-space:nowrap;
+}
+.tag-x{cursor:pointer;opacity:.6;font-size:.7rem;line-height:1;padding:0 .1rem}
+.tag-x:hover{opacity:1;color:var(--red)}
+.tag-input{
+  background:transparent;border:none;outline:none;color:var(--text);
+  font-size:.83rem;min-width:90px;flex:1;padding:.14rem 0;
+}
+.tag-input::placeholder{color:rgba(200,200,255,.22)}
+.mode-row{display:flex;align-items:center;gap:.45rem;font-size:.72rem;color:var(--muted)}
+.mode-btn{
+  padding:.22rem .62rem;border-radius:6px;cursor:pointer;font-size:.7rem;font-weight:800;
+  border:1px solid rgba(108,99,255,.22);background:transparent;color:var(--muted);transition:all .15s;
+}
+.mode-btn.on{background:rgba(108,99,255,.22);border-color:var(--purple);color:#fff}
+.min-match-wrap{display:flex;align-items:center;gap:.35rem;font-size:.7rem;color:var(--muted)}
+.min-match-wrap input{width:46px;padding:.26rem .4rem;text-align:center;font-size:.78rem;min-width:unset}
+
 /* ══ WATCHLIST ITEMS ══ */
 .wl-empty{text-align:center;padding:1.2rem .5rem;color:var(--muted);font-size:.76rem}
 .wl-empty-ico{font-size:1.7rem;margin-bottom:.35rem}
@@ -439,7 +468,19 @@ select option{background:#0b0b1e}
         </div>
         <div class="pbody">
           <div class="fcol">
-            <div class="iw"><span class="ii">🔍</span><input id="kw" type="text" placeholder="Keyword  (e.g. Rolex, MacBook)" autocomplete="off"></div>
+            <!-- Keyword tag input -->
+            <div class="tag-wrap" id="tag-wrap" onclick="document.getElementById('tag-inp').focus()">
+              <span id="tag-list"></span>
+              <input id="tag-inp" class="tag-input" placeholder="Type keyword, press Enter…" autocomplete="off">
+            </div>
+            <!-- All / Some toggle -->
+            <div class="mode-row">
+              <button class="mode-btn on" id="mode-all" onclick="setMode('all')">All</button>
+              <button class="mode-btn" id="mode-some" onclick="setMode('some')">Some</button>
+              <span id="min-match-wrap" class="min-match-wrap" style="display:none">
+                — at least <input id="min-match" type="number" min="1" value="2" style="width:42px;padding:.24rem .4rem;text-align:center"> keywords
+              </span>
+            </div>
             <div class="iw"><span class="ii" style="font-size:.72rem;font-weight:900;color:rgba(200,200,255,.35)">$</span><input id="th" type="number" placeholder="Max bid threshold" step="0.01" min="0.01"></div>
             <div class="iw"><span class="ii" style="font-size:.8rem">⏱</span><input id="tw" type="number" placeholder="Snipe window (minutes)" step="1" min="1" max="60" value="10"></div>
             <select id="cat">
@@ -767,20 +808,68 @@ function setCat(c){activeCat=c;buildPills();renderItems()}
 /* =========================================================
    WATCHLIST
    ========================================================= */
+/* ── Keyword tag state ── */
+let tagKws=[];
+let kwMode='all';
+
+function setMode(m){
+  kwMode=m;
+  document.getElementById('mode-all').classList.toggle('on',m==='all');
+  document.getElementById('mode-some').classList.toggle('on',m==='some');
+  document.getElementById('min-match-wrap').style.display=m==='some'?'flex':'none';
+}
+
+function renderTags(){
+  document.getElementById('tag-list').innerHTML=tagKws.map((k,i)=>
+    `<span class="tag">${k}<span class="tag-x" onclick="removeTag(${i})">✕</span></span>`
+  ).join('');
+}
+
+function addTag(raw){
+  const k=raw.trim().toLowerCase().replace(/,/g,'');
+  if(k&&!tagKws.includes(k)){tagKws.push(k);renderTags();}
+}
+
+function removeTag(i){tagKws.splice(i,1);renderTags();}
+
+(function initTagInput(){
+  const inp=document.getElementById('tag-inp');
+  if(!inp)return;
+  inp.addEventListener('keydown',e=>{
+    if((e.key==='Enter'||e.key===',')&&inp.value.trim()){
+      e.preventDefault();addTag(inp.value);inp.value='';
+    }
+    if(e.key==='Backspace'&&!inp.value&&tagKws.length){
+      tagKws.pop();renderTags();
+    }
+  });
+  inp.addEventListener('blur',()=>{if(inp.value.trim()){addTag(inp.value);inp.value=''}});
+})();
+
 function addWatch(){
-  const kw=document.getElementById('kw').value.trim();
+  // Flush any pending text in the tag input
+  const inp=document.getElementById('tag-inp');
+  if(inp&&inp.value.trim()){addTag(inp.value);inp.value='';}
+
+  const kws=[...tagKws];
   const th=parseFloat(document.getElementById('th').value);
   const tw=parseInt(document.getElementById('tw').value)||10;
   const cat=document.getElementById('cat').value;
-  if(!kw)return notify('info','Missing keyword','Enter something to search for');
+  const minMatch=parseInt(document.getElementById('min-match').value)||2;
+
+  if(!kws.length)return notify('info','No keywords','Type at least one keyword and press Enter');
   if(!th||th<=0)return notify('info','Missing threshold','Enter the max price you\'d pay');
-  const w={id:Date.now(),kw,th,tw,cat,emoji:EMO[cat]||'📦'};
+
+  const w={id:Date.now(),kws,mode:kwMode,minMatch,th,tw,cat,emoji:EMO[cat]||'📦'};
   watches.push(w);
   renderWatches();updateStats();
-  notify('info',`Watching "${kw}"`,`Alert if ≤ $${th.toFixed(2)} within ${tw} min — discards if over`);
-  term(`Watching "${kw}" — max $${th.toFixed(2)} — snipe window ${tw} min`,'ok');
+
+  const modeLabel=kwMode==='some'?`any ${minMatch} of ${kws.length}`:'all';
+  notify('info',`Watching [${kws.join(', ')}]`,`Match ${modeLabel} · ≤ $${th.toFixed(2)} · ⏱ ${tw}m`);
+  term(`Watch: [${kws.join(', ')}] mode=${kwMode} max=$${th.toFixed(2)} snipe=${tw}m`,'ok');
   scanFor(w);
-  document.getElementById('kw').value='';
+
+  tagKws=[];renderTags();
   document.getElementById('th').value='';
 }
 
@@ -799,14 +888,21 @@ function renderWatches(){
     el.innerHTML=`<div class="wl-empty"><div class="wl-empty-ico">👁</div>Nothing on watchlist yet</div>`;
     return;
   }
-  el.innerHTML=watches.map(w=>`
-    <div class="wi">
-      <div class="wi-l">
+  el.innerHTML=watches.map(w=>{
+    const kws=w.kws||[w.kw||'?'];
+    const modeLabel=w.mode==='some'?`any ${w.minMatch||2}`:'all';
+    const chips=kws.map(k=>`<span class="tag" style="font-size:.62rem;padding:.12rem .38rem">${k}</span>`).join('');
+    return`<div class="wi">
+      <div class="wi-l" style="flex:1;min-width:0">
         <span class="wi-em">${w.emoji}</span>
-        <div><div class="wi-kw">${w.kw}</div><div class="wi-th">≤ $${w.th.toFixed(2)} · ⏱ ${w.tw||10}m</div></div>
+        <div style="min-width:0">
+          <div class="wi-kw" style="display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.25rem">${chips}</div>
+          <div class="wi-th">≤ $${w.th.toFixed(2)} · ⏱ ${w.tw||10}m · ${modeLabel} keywords</div>
+        </div>
       </div>
       <button class="rm" onclick="removeWatch(${w.id})">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function scanFor(w){
@@ -1164,7 +1260,7 @@ function tick(){
       const w=watches[watches.length-1];
       fetch('/api/watchlist',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({kw:w.kw,th:w.th,tw:w.tw,cat:w.cat})
+        body:JSON.stringify({kws:w.kws,mode:w.mode,minMatch:w.minMatch,th:w.th,tw:w.tw,cat:w.cat})
       }).catch(()=>{});
     }
   };
