@@ -1,0 +1,6 @@
+node_modules
+.nellis-cookies.json
+.nellis-storage.json
+notifications.json
+watchlist.json
+*.log

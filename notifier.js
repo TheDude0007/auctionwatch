@@ -4,7 +4,8 @@ const twilio     = require('twilio');
 const fs         = require('fs');
 const path       = require('path');
 
-const NOTIF_FILE = path.join(__dirname, 'notifications.json');
+const DATA_DIR   = process.env.DATA_DIR || __dirname;
+const NOTIF_FILE = path.join(DATA_DIR, 'notifications.json');
 
 function loadConfig() {
   try { return fs.existsSync(NOTIF_FILE) ? JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')) : {}; }

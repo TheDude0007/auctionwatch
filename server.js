@@ -14,7 +14,8 @@ const anthropic = process.env.ANTHROPIC_API_KEY
 
 const PORT           = parseInt(process.env.PORT || '3010');
 const SCAN_CRON      = process.env.SCAN_CRON || '0 8 * * *';
-const WATCHLIST_FILE = path.join(__dirname, 'watchlist.json');
+const DATA_DIR       = process.env.DATA_DIR || __dirname;
+const WATCHLIST_FILE = path.join(DATA_DIR, 'watchlist.json');
 
 // ── State ────────────────────────────────────────────────────
 function loadWatchlist() {
