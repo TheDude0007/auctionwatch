@@ -527,7 +527,7 @@ select option{background:#0b0b1e}
           <div style="margin-top:.9rem">
             <div class="ptitle" style="margin-bottom:.5rem">Daily Schedule</div>
             <div class="time-row">
-              <input type="time" id="scan-time" value="16:50">
+              <input type="time" id="scan-time" value="16:00">
               <button class="btn" onclick="setScanTime()">Set</button>
             </div>
             <div id="snxt-abs" style="font-size:.64rem;color:var(--muted);text-align:center"></div>
@@ -880,7 +880,7 @@ function removeWatch(id){
   watches=watches.filter(x=>x.id!==id);
   live=live.filter(i=>i.wid!==id);
   renderWatches();renderItems();updateStats();
-  if(w)term(`Removed "${w.kw}" from watchlist`,'warn');
+  if(w)term(`Removed "[${(w.kws||[w.kw||'?']).join(', ')}]" from watchlist`,'warn');
 }
 
 function renderWatches(){
@@ -908,11 +908,16 @@ function renderWatches(){
 }
 
 function scanFor(w){
-  MOCK.filter(m=>
-    m.title.toLowerCase().includes(w.kw.toLowerCase())||(w.cat&&m.category===w.cat)
-  ).forEach(m=>{
+  const kws=w.kws||[w.kw||''];
+  function matchesKws(title){
+    const t=title.toLowerCase();
+    const hits=kws.filter(k=>t.includes(k.toLowerCase())).length;
+    return w.mode==='some'?hits>=(w.minMatch||Math.ceil(kws.length/2)):hits===kws.length;
+  }
+  MOCK.filter(m=>matchesKws(m.title)||(w.cat&&m.category===w.cat))
+  .forEach(m=>{
     if(!live.find(i=>i.id===m.id)){
-      live.push({...m,wid:w.id,th:w.th,emoji:EMO[m.category]||'📦'});
+      live.push({...m,wid:w.id,th:w.th,tw:w.tw||10,emoji:EMO[m.category]||'📦',keyword:kws.join(', ')});
       notify('ok',`Match: ${m.title.slice(0,42)}…`,`$${m.price.toFixed(2)} · ${fmt(m.end-Date.now())}`);
     }
   });
@@ -1074,7 +1079,7 @@ function updateStats(){
 /* =========================================================
    SCAN SCHEDULE
    ========================================================= */
-let schedH=16,schedM=50;
+let schedH=16,schedM=0;
 
 function setScanTime(){
   const v=document.getElementById('scan-time').value;
@@ -1201,7 +1206,7 @@ function tick(){
 
       if(msg.type==='keyword_done'){
         term(`"${msg.keyword}" → ${msg.count} result(s)`,'ok');
-        const idx=watches.findIndex(w=>w.kw===msg.keyword)+1;
+        const idx=watches.findIndex(w=>(w.kws||[w.kw]).join(', ')===msg.keyword)+1;
         if(watches.length){scanPct=Math.min(94,Math.round((idx/watches.length)*100))}
         document.getElementById('sfill').style.width=scanPct+'%';
         document.getElementById('spct').textContent=Math.floor(scanPct)+'%';
@@ -1341,7 +1346,7 @@ const seed=[['Rolex','5','watches'],['MacBook','5','electronics'],['Jordan','5',
 let dl=550;
 seed.forEach(([kw,th,cat])=>{
   setTimeout(()=>{
-    document.getElementById('kw').value=kw;
+    addTag(kw);
     document.getElementById('th').value=th;
     document.getElementById('cat').value=cat;
     addWatch();

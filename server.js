@@ -13,7 +13,7 @@ const anthropic = process.env.ANTHROPIC_API_KEY
   : null;
 
 const PORT           = parseInt(process.env.PORT || '3010');
-const SCAN_CRON      = process.env.SCAN_CRON || '50 16 * * *'; // 4:50 PM — before auctions open at 5 PM
+const SCAN_CRON      = process.env.SCAN_CRON || '0 16 * * *'; // 4:00 PM daily keyword scan
 const DATA_DIR       = process.env.DATA_DIR || __dirname;
 const WATCHLIST_FILE = path.join(DATA_DIR, 'watchlist.json');
 
@@ -232,16 +232,17 @@ async function refreshSoonEnding() {
   console.log(`[refresh] updating ${keywords.length} soon-ending keyword(s): ${keywords.join(', ')}`);
 
   for (const kw of keywords) {
-    const w = watchlist.find(x => x.kw === kw);
+    const w = watchlist.find(x => (x.kws || (x.kw ? [x.kw] : [])).join(', ') === kw);
     if (!w) continue;
     if (keywords.indexOf(kw) > 0) await new Promise(r => setTimeout(r, 6000 + Math.random() * 8000));
     try {
-      const fresh = await searchNellis(w.kw, w.th);
+      const query = (w.kws || (w.kw ? [w.kw] : [])).join(' ');
+      const fresh = await searchNellis(query, w.th);
       // Merge: update matching items in liveItems
       fresh.forEach(fi => {
         const idx = liveItems.findIndex(i => i.id === fi.id);
         if (idx !== -1) liveItems[idx] = { ...liveItems[idx], price: fi.price, end: fi.end };
-        else liveItems.push({ ...fi, wid: w.id, th: w.th, keyword: w.kw });
+        else liveItems.push({ ...fi, wid: w.id, th: w.th, tw: w.tw, keyword: (w.kws || (w.kw ? [w.kw] : [])).join(', ') });
       });
       broadcast({ type: 'scan_complete', items: liveItems, ts: Date.now() });
     } catch (e) { console.error('[refresh]', e.message); }
@@ -307,7 +308,8 @@ const server = http.createServer(async (req, res) => {
     saveWatchlist();
     sendJSON(res, 201, item);
     // Immediate scan for just this keyword (non-blocking)
-    setTimeout(() => runScan(item.kw), 500);
+    const scanKey = (item.kws || (item.kw ? [item.kw] : [])).join(' ');
+    if (scanKey) setTimeout(() => runScan(scanKey), 500);
     return;
   }
 
@@ -372,7 +374,7 @@ const server = http.createServer(async (req, res) => {
       url: i.url,
       category: i.category || 'misc',
     }));
-    const ctxWatches = watchlist.map(w => ({ keyword: w.kw, maxPrice: `$${w.th.toFixed(2)}`, category: w.cat }));
+    const ctxWatches = watchlist.map(w => ({ keyword: (w.kws || (w.kw ? [w.kw] : [])).join(', '), maxPrice: `$${w.th.toFixed(2)}`, category: w.cat }));
     const system = `You are AuctionWatch AI — an expert auction strategist embedded in a real-time Nellis Auction bid-sniping tool.
 
 LIVE AUCTION DATA (as of ${new Date().toLocaleString()}):
@@ -477,7 +479,7 @@ server.listen(PORT, () => {
   console.log(`\n⚡ AuctionWatch — NellisAuction monitor`);
   console.log(`   UI          → http://localhost:${PORT}`);
   console.log(`   Mode        : ${MOCK_MODE ? 'MOCK (set MOCK_MODE=false to go live)' : 'LIVE (Playwright/Nellis)'}`);
-  console.log(`   Daily scan  : ${SCAN_CRON}  (±5 min jitter)`);
+  console.log(`   Daily scan  : ${SCAN_CRON}  (±5 min jitter — default 4:00 PM)`);
   console.log(`   Alert gate  : price ≤ threshold AND ≤ 10 min remaining → alert; price > threshold → discard`);
   console.log(`   Price refresh: every 5 min for items ending within 90 min\n`);
 
