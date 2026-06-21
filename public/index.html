@@ -441,6 +441,7 @@ select option{background:#0b0b1e}
           <div class="fcol">
             <div class="iw"><span class="ii">🔍</span><input id="kw" type="text" placeholder="Keyword  (e.g. Rolex, MacBook)" autocomplete="off"></div>
             <div class="iw"><span class="ii" style="font-size:.72rem;font-weight:900;color:rgba(200,200,255,.35)">$</span><input id="th" type="number" placeholder="Max bid threshold" step="0.01" min="0.01"></div>
+            <div class="iw"><span class="ii" style="font-size:.8rem">⏱</span><input id="tw" type="number" placeholder="Snipe window (minutes)" step="1" min="1" max="60" value="10"></div>
             <select id="cat">
               <option value="">📦  All Categories</option>
               <option value="electronics">💻  Electronics</option>
@@ -769,14 +770,15 @@ function setCat(c){activeCat=c;buildPills();renderItems()}
 function addWatch(){
   const kw=document.getElementById('kw').value.trim();
   const th=parseFloat(document.getElementById('th').value);
+  const tw=parseInt(document.getElementById('tw').value)||10;
   const cat=document.getElementById('cat').value;
   if(!kw)return notify('info','Missing keyword','Enter something to search for');
   if(!th||th<=0)return notify('info','Missing threshold','Enter the max price you\'d pay');
-  const w={id:Date.now(),kw,th,cat,emoji:EMO[cat]||'📦'};
+  const w={id:Date.now(),kw,th,tw,cat,emoji:EMO[cat]||'📦'};
   watches.push(w);
   renderWatches();updateStats();
-  notify('info',`Watching "${kw}"`,`Will alert at ≤ $${th.toFixed(2)} with 10 min left — discards if over`);
-  term(`Watching "${kw}" — threshold $${th.toFixed(2)}`,'ok');
+  notify('info',`Watching "${kw}"`,`Alert if ≤ $${th.toFixed(2)} within ${tw} min — discards if over`);
+  term(`Watching "${kw}" — max $${th.toFixed(2)} — snipe window ${tw} min`,'ok');
   scanFor(w);
   document.getElementById('kw').value='';
   document.getElementById('th').value='';
@@ -801,7 +803,7 @@ function renderWatches(){
     <div class="wi">
       <div class="wi-l">
         <span class="wi-em">${w.emoji}</span>
-        <div><div class="wi-kw">${w.kw}</div><div class="wi-th">≤ $${w.th.toFixed(2)}</div></div>
+        <div><div class="wi-kw">${w.kw}</div><div class="wi-th">≤ $${w.th.toFixed(2)} · ⏱ ${w.tw||10}m</div></div>
       </div>
       <button class="rm" onclick="removeWatch(${w.id})">✕</button>
     </div>`).join('');
@@ -1033,7 +1035,8 @@ function tick(){
     // Alert check
     live.forEach(item=>{
       const rem=item.end-now;
-      if(rem>0&&rem<=600000&&!alerted.has(item.id)&&!discarded.has(item.id)){
+      const snipeMs=(item.tw||10)*60000;
+      if(rem>0&&rem<=snipeMs&&!alerted.has(item.id)&&!discarded.has(item.id)){
         if(item.price<=item.th){
           alerted.add(item.id);alertCount++;
           toast('Bid Now!',`<strong>${item.title.slice(0,48)}</strong><br>${fmt(rem)} left · <strong>$${item.price.toFixed(2)}</strong>`);
@@ -1161,7 +1164,7 @@ function tick(){
       const w=watches[watches.length-1];
       fetch('/api/watchlist',{
         method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({kw:w.kw,th:w.th,cat:w.cat})
+        body:JSON.stringify({kw:w.kw,th:w.th,tw:w.tw,cat:w.cat})
       }).catch(()=>{});
     }
   };

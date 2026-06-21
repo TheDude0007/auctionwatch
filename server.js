@@ -117,7 +117,8 @@ function checkAlerts() {
     const rem = item.end - now;
     if (rem <= 0 || alerted.has(item.id) || discarded.has(item.id)) return;
 
-    if (rem <= 600_000) { // within 10 minutes
+    const snipeMs = (item.tw || 10) * 60_000;
+    if (rem <= snipeMs) {
       if (item.price <= item.th) {
         alerted.add(item.id);
         broadcast({ type: 'alert', item });
